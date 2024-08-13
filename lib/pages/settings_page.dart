@@ -14,7 +14,6 @@ class _SettingsPageState extends State<SettingsPage> {
   ThemeMode _themeMode = ThemeMode.system;
   int _concurrentDownloads = 3;
   bool _buildXmls = false; // New setting for building XMLs
-  final IsarService _isarService = IsarService();
 
   @override
   void initState() {
@@ -148,7 +147,8 @@ Future<void> _showClearDatabaseConfirmationDialog(BuildContext context) async {
               child: const Text('Clear'),
               onPressed: () async {
                 // Clear all collections in the Isar database
-                await _isarService.clearAllData();
+
+                await IsarService.clearAllData();
                 
                 Navigator.of(context).pop();
                 // Optionally show a success message

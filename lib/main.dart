@@ -1,70 +1,60 @@
+import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:myapp/services/isar_service.dart';
-import 'isar_collections/album.dart';
-import 'isar_collections/artist.dart';
-import 'isar_collections/song.dart';
-import 'providers/playlist_provider.dart';
-import '../providers/isar_provider.dart';
-
-
-
-
-
-
+import 'package:myapp/isar_collections/album.dart';
+import 'package:myapp/pages/albums_page.dart';
+import 'package:myapp/isar_collections/song.dart';
+import 'package:myapp/isar_collections/artist.dart';
+import 'package:myapp/components/my_drawer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final isar = await IsarService().openDB(); 
+  await IsarService().initialize();
 
-
-
-  runApp(
-    ProviderScope(
-      overrides: [
-        isarProvider.overrideWithValue(isar),
-      ],
-      child: MyApp(),
-    ),
-  );
+  runApp(MyApp());
 }
 
-
 class MyApp extends StatelessWidget {
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Music App',
+      debugShowCheckedModeBanner: false,
+      // home: MyHomePage(albums: albums, songs: songs, artists: artists, isarService: isarService),
       home: MyHomePage(),
     );
   }
 }
 
-class MyHomePage extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final playlist = ref.watch(playlistProvider);
+class MyHomePage extends StatefulWidget {
 
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  @override
+  Widget build(BuildContext context)
+{
     return Scaffold(
       appBar: AppBar(
-        title: Text('Music App'),
+        title: const Text('Music App'),
       ),
+        drawer:MyDrawer(),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text('Playlist: ${playlist.length} songs'),
-            // Artist section (show empty if no artists)
-            Text('Artists: ${ref.watch(artistCountProvider) == 0 ? "No Artists" : ""}'),
-            // Empty album page
-            Text('Albums:'),
+          children: [
             ElevatedButton(
-              onPressed: () {
-                // Navigate to empty album page
+                onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AlbumsPage()),
+                );
               },
-              child: Text('View Albums'),
+              child: const Text('View Albums'),
             ),
           ],
         ),
@@ -73,7 +63,4 @@ class MyHomePage extends ConsumerWidget {
   }
 }
 
-final artistCountProvider = Provider((ref) {
-  final isar = ref.watch(isarProvider);
-  return isar.artists.countSync();
-});
+

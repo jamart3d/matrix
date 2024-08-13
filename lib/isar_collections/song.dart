@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:myapp/isar_collections/album.dart';
+import 'package:myapp/isar_collections/artist.dart';
 
 part 'song.g.dart'; // Ensure code generation
 
@@ -9,25 +9,30 @@ class Song {
   Id id = Isar.autoIncrement;
 
   @Index(type: IndexType.value)
-  late String title; // Song title (indexed for faster queries)
+  late String title; 
 
-  late String artist; // Artist name
 
-  int? albumId; // ID of the album this song belongs to (optional)
+  int? albumId; 
 
-  int? track; // Track number (optional)
+  int? track; 
 
-  int? duration; // Song duration in seconds (optional)
+  int? duration; 
 
   @Index(unique: true)
-  late String audioFileUrl; // URL of the audio file (unique and indexed)
+  late String audioFileUrl; 
 
-  String? localFilePath; // Local file path (if downloaded) - optional
-  String? localFileName; // Local file name (if downloaded) - optional
-  //late String album;
+  String? localFilePath; 
+  String? localFileName; 
   
-  @required
-   final album = IsarLink<Album>(); // Link to the album
+  final album = IsarLink<Album>(); 
+  final artist = IsarLink<Artist>(); 
+
+  // @Backlink(to: 'songs')
+  // final artist = IsarLink<Artist>();
+
+  // @Backlink(to: 'songs')
+  // final album = IsarLink<Album>();
 
   Song(this.title); 
 }
+

@@ -30,6 +30,12 @@ const ArtistSchema = CollectionSchema(
   idName: r'id',
   indexes: {},
   links: {
+    r'songs': LinkSchema(
+      id: -2680292970779405134,
+      name: r'songs',
+      target: r'Song',
+      single: false,
+    ),
     r'albums': LinkSchema(
       id: 1191741275057072848,
       name: r'albums',
@@ -50,7 +56,12 @@ int _artistEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  bytesCount += 3 + object.name.length * 3;
+  {
+    final value = object.name;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -71,7 +82,7 @@ Artist _artistDeserialize(
 ) {
   final object = Artist();
   object.id = id;
-  object.name = reader.readString(offsets[0]);
+  object.name = reader.readStringOrNull(offsets[0]);
   return object;
 }
 
@@ -83,7 +94,7 @@ P _artistDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -94,11 +105,12 @@ Id _artistGetId(Artist object) {
 }
 
 List<IsarLinkBase<dynamic>> _artistGetLinks(Artist object) {
-  return [object.albums];
+  return [object.songs, object.albums];
 }
 
 void _artistAttach(IsarCollection<dynamic> col, Id id, Artist object) {
   object.id = id;
+  object.songs.attach(col, col.isar.collection<Song>(), r'songs', id);
   object.albums.attach(col, col.isar.collection<Album>(), r'albums', id);
 }
 
@@ -230,8 +242,24 @@ extension ArtistQueryFilter on QueryBuilder<Artist, Artist, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Artist, Artist, QAfterFilterCondition> nameIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'name',
+      ));
+    });
+  }
+
+  QueryBuilder<Artist, Artist, QAfterFilterCondition> nameIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'name',
+      ));
+    });
+  }
+
   QueryBuilder<Artist, Artist, QAfterFilterCondition> nameEqualTo(
-    String value, {
+    String? value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -244,7 +272,7 @@ extension ArtistQueryFilter on QueryBuilder<Artist, Artist, QFilterCondition> {
   }
 
   QueryBuilder<Artist, Artist, QAfterFilterCondition> nameGreaterThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -259,7 +287,7 @@ extension ArtistQueryFilter on QueryBuilder<Artist, Artist, QFilterCondition> {
   }
 
   QueryBuilder<Artist, Artist, QAfterFilterCondition> nameLessThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -274,8 +302,8 @@ extension ArtistQueryFilter on QueryBuilder<Artist, Artist, QFilterCondition> {
   }
 
   QueryBuilder<Artist, Artist, QAfterFilterCondition> nameBetween(
-    String lower,
-    String upper, {
+    String? lower,
+    String? upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -363,6 +391,62 @@ extension ArtistQueryFilter on QueryBuilder<Artist, Artist, QFilterCondition> {
 extension ArtistQueryObject on QueryBuilder<Artist, Artist, QFilterCondition> {}
 
 extension ArtistQueryLinks on QueryBuilder<Artist, Artist, QFilterCondition> {
+  QueryBuilder<Artist, Artist, QAfterFilterCondition> songs(
+      FilterQuery<Song> q) {
+    return QueryBuilder.apply(this, (query) {
+      return query.link(q, r'songs');
+    });
+  }
+
+  QueryBuilder<Artist, Artist, QAfterFilterCondition> songsLengthEqualTo(
+      int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'songs', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<Artist, Artist, QAfterFilterCondition> songsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'songs', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<Artist, Artist, QAfterFilterCondition> songsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'songs', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<Artist, Artist, QAfterFilterCondition> songsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'songs', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<Artist, Artist, QAfterFilterCondition> songsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'songs', length, include, 999999, true);
+    });
+  }
+
+  QueryBuilder<Artist, Artist, QAfterFilterCondition> songsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(
+          r'songs', lower, includeLower, upper, includeUpper);
+    });
+  }
+
   QueryBuilder<Artist, Artist, QAfterFilterCondition> albums(
       FilterQuery<Album> q) {
     return QueryBuilder.apply(this, (query) {
@@ -476,7 +560,7 @@ extension ArtistQueryProperty on QueryBuilder<Artist, Artist, QQueryProperty> {
     });
   }
 
-  QueryBuilder<Artist, String, QQueryOperations> nameProperty() {
+  QueryBuilder<Artist, String?, QQueryOperations> nameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'name');
     });

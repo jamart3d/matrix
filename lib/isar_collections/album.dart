@@ -1,4 +1,5 @@
 import 'package:isar/isar.dart';
+import 'package:myapp/isar_collections/artist.dart';
 import 'package:myapp/isar_collections/song.dart';
 
 part 'album.g.dart'; // Ensure code generation
@@ -10,7 +11,7 @@ class Album {
   @Index(type: IndexType.value, unique: true)
   late String title; // Title of the album (unique and indexed)
 
-  late String artist; // Artist of the album
+  //late String artist; // Artist of the album
 
   String? imageUrl; // Optional URL for the album cover image
 
@@ -19,5 +20,9 @@ class Album {
   @Backlink(to: 'album')
   final songs = IsarLinks<Song>();
 
-  Album(this.title);
+  //@Backlink(to: 'album')
+  final artist = IsarLink<Artist>(); 
+
+
+  Album();
 }

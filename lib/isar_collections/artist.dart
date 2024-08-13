@@ -1,5 +1,6 @@
 import 'package:isar/isar.dart';
 import 'package:myapp/isar_collections/album.dart';
+import 'package:myapp/isar_collections/song.dart';
 
 part 'artist.g.dart';
 
@@ -7,7 +8,10 @@ part 'artist.g.dart';
 class Artist {
   Id id = Isar.autoIncrement;
 
-  String name = '';
-
+  late String? name;
+  
+  final songs = IsarLinks<Song>();
   final albums = IsarLinks<Album>();
+  
+  Artist();
 }
