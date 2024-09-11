@@ -1,66 +1,49 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:myapp/services/isar_service.dart';
-import 'package:myapp/isar_collections/album.dart';
 import 'package:myapp/pages/albums_page.dart';
-import 'package:myapp/isar_collections/song.dart';
-import 'package:myapp/isar_collections/artist.dart';
-import 'package:myapp/components/my_drawer.dart';
+import 'package:myapp/pages/music_player_page.dart';
+import 'package:myapp/pages/track_playlist_page.dart';
+import 'package:myapp/providers/track_player_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:logger/logger.dart';
 
-void main() async {
+final logger = Logger(
+  printer: PrettyPrinter(
+    methodCount: 0,
+    errorMethodCount: 5,
+    lineLength: 120,
+    colors: true,
+    printEmojis: true,
+  ),
+);
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await IsarService().initialize();
-
-  runApp(MyApp());
+  runApp(MyApp()); 
 }
 
 class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Music App',
-      debugShowCheckedModeBanner: false,
-      // home: MyHomePage(albums: albums, songs: songs, artists: artists, isarService: isarService),
-      home: MyHomePage(),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  Widget build(BuildContext context)
-{
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Music App'),
-      ),
-        drawer:MyDrawer(),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(
-                onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AlbumsPage()),
-                );
-              },
-              child: const Text('View Albums'),
-            ),
-          ],
+    return MultiProvider(
+      providers: [
+        Provider<Logger>(create: (_) => logger),
+        ChangeNotifierProvider(
+            create: (context) => TrackPlayerProvider(logger: context.read<Logger>())),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'huntrex',
+        theme: ThemeData(
+          primarySwatch: Colors.deepPurple,
         ),
+        home: const AlbumsPage(),
+        routes: {
+          '/albums_page': (context) => const AlbumsPage(),
+          '/music_player_page': (context) => MusicPlayerPage(),
+          '/song_playlist_page': (context) => TrackPlaylistPage(),
+        },
       ),
     );
   }
 }
-
-

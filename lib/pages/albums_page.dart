@@ -1,146 +1,204 @@
-import 'package:flutter/material.dart';
-import 'package:myapp/isar_collections/album.dart';
-import 'package:myapp/isar_collections/song.dart';
-import '../services/isar_service.dart';
+import 'dart:math';
 
-class AlbumsPage extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:myapp/components/my_drawer.dart';
+import 'package:myapp/helpers/album_helper.dart';
+import 'package:myapp/models/track.dart';
+import 'package:myapp/pages/album_detail_page.dart';
+import 'package:myapp/pages/music_player_page.dart';
+import 'package:myapp/providers/track_player_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:myapp/utils/load_json_data.dart';
+import 'package:logger/logger.dart';
+
+class AlbumsPage extends StatefulWidget {
   const AlbumsPage({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    var isarService = IsarService();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Albums'),
-      ),
-      body: FutureBuilder(
-          future: isarService.getAlbums(),
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              List<Album> albums = snapshot.data as List<Album>;
-              if (albums.isNotEmpty) {
-                return ListView.builder(
-                  itemCount: albums.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(albums[index].title),
-                      trailing: albums[index].imageUrl != null
-                          ? Image.network(albums[index].imageUrl!)
-                          : Image.asset("assets/images/trans_steal.png"),
-
-                      subtitle:
-                          Text('Artist: ${albums[index].artist.value?.name}'),
-                      onTap: () async {
-                        //print(albums[index].title);
-
-                        // var aristF =
-                        //     isarService.getArtistForAlbum(albums[index]);
-                        // final aristF1 = await aristF;
-                        //print(aristF1?.name);
-                        //print(albums[index].artist.value?.name);
-                        // Handle album tap
-                        // final songsFuture =
-                        //     isarService.getAllSongsFromAlbum(index);
-                        // final songs = await songsFuture;
-
-                        //print(songs);
-                        print(albums[index].title);
-                        print(albums[index].artist.value?.name);
-                        print(albums);
-                        print(index);
-                        print(albums[index]);
-                        print(albums[index].artist);
-                        print(albums[index].artist.value);
-
-                        // for (var song in albums[index].songs) {
-                        //   print(song);
-                        //   print("poop");
-                        // }
-                        // for (var song in albums[index].songs.value) {
-                        //   print(song);
-                        // }
-
-                        // for (var song in songs) {
-                        //   print(song);
-                        // }
-                        // Navigate to the album details screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AlbumDetailsPage(
-                              album: albums[index],
-                            ),
-                          ),
-                        );
-                      },
-                      // Add other album details here
-                    );
-                  },
-                );
-              } else {
-                return const Center(child: Text('No albums found'));
-              }
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else {
-              return const Center(child: CircularProgressIndicator());
-            }
-          }),
-    );
-  }
+  _AlbumsPageState createState() => _AlbumsPageState();
 }
 
-class AlbumDetailsPage extends StatelessWidget {
-  final Album album;
+class _AlbumsPageState extends State<AlbumsPage> {
+  late Logger logger;
+  List<Map<String, dynamic>>? _cachedAlbumData;
 
-  AlbumDetailsPage({required this.album});
+  @override
+  void initState() {
+    super.initState();
+    logger = context.read<Logger>();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      if (_cachedAlbumData == null) {
+        final tracks = await loadJsonData(context);
+        logger.d("LOADED HOMEPAGE JSON: ${tracks.length}");
+        final albumTracks = groupTracksByAlbum(tracks);
+        setState(() {
+          _cachedAlbumData = _createAlbumDataList(albumTracks);
+        });
+      }
+    } catch (e) {
+      logger.e("Error loading data: $e");
+    }
+  }
+
+  List<Map<String, dynamic>> _createAlbumDataList(
+      Map<String, List<Track>> albumTracks) {
+    final Map<String, int> albumIndex = {};
+    int index = 1;
+    for (final albumName in albumTracks.keys) {
+      albumIndex[albumName] = index++;
+    }
+    assignAlbumArtToTracks(albumTracks, albumIndex);
+
+    return albumTracks.entries
+        .map((entry) => {
+              'album': entry.key,
+              'songs': entry.value,
+              'songCount': entry.value.length,
+              'artistName': entry.value.first.artistName ??
+                  entry.value.first.trackArtistName,
+              'albumArt': entry.value.first.albumArt,
+            })
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    var isarService = IsarService();
     return Scaffold(
       appBar: AppBar(
-        title: Text(album.title),
+        title: const Text("Hunters Trix"),
+        actions: _buildAppBarActions(context),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'Artist: ${album.artist.value?.name}',
-              style: const TextStyle(fontSize: 18),
-            ),
-          ),
-          Expanded(
-            child: FutureBuilder(
-              future: isarService.getSongsFromAlbum(album),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  List<Song> songs = snapshot.data as List<Song>;
-                  if (songs.isNotEmpty) {
-                    return ListView.builder(
-                      itemCount: songs.length,
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          title: Text(songs[index].title),
-                          subtitle: Text('Duration: ${songs[index].duration}'),
-                        );
-                      },
-                    );
-                  } else {
-                    return const Center(child: Text('No songs found'));
-                  }
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else {
-                  return const Center(child: CircularProgressIndicator());
-                }
-              },
-            ),
-          ),
-        ],
+      drawer: MyDrawer(),
+      body: _buildBody(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => MusicPlayerPage()),
+          );
+        },
+        child: const Icon(Icons.play_circle),
       ),
     );
+  }
+
+  List<Widget> _buildAppBarActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.question_mark),
+        onPressed: () => _handleRandomAlbumSelection(context),
+      ),
+    ];
+  }
+
+  void _handleRandomAlbumSelection(BuildContext context) {
+    if (_cachedAlbumData != null) {
+      _selectRandomAlbum(context, _cachedAlbumData!, logger);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please wait for albums to load')));
+    }
+  }
+
+  Widget _buildBody() {
+    if (_cachedAlbumData == null) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (_cachedAlbumData!.isEmpty) {
+      return const Center(child: Text("No albums available."));
+    } else {
+      return _buildAlbumList();
+    }
+  }
+
+  Widget _buildAlbumList() {
+    return ListView.builder(
+      itemCount: _cachedAlbumData?.length ?? 0,
+      itemBuilder: (context, index) {
+        final albumData = _cachedAlbumData![index];
+        final albumName = albumData['album'] as String;
+        final albumArt = albumData['albumArt'] as String;
+
+        return ListTile(
+          leading: Image.asset(
+            albumArt,
+            // width: 50,
+            // height: 50,
+            fit: BoxFit.cover,
+          ),
+          title: Text(albumName,
+          softWrap: true,
+          overflow: TextOverflow.ellipsis,
+          ),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AlbumDetailPage(
+                  tracks: albumData['songs'] as List<Track>,
+                  albumArt: albumArt,
+                  albumName: albumName,
+                ),
+              ),
+            );
+          },
+          onLongPress: () => _handleAlbumTap(albumData),
+        );
+      },
+    );
+  }
+
+  void _handleAlbumTap(Map<String, dynamic> albumData) {
+    final trackPlayerProvider =
+        Provider.of<TrackPlayerProvider>(context, listen: false);
+    final albumTracks = albumData['songs'] as List<Track>;
+
+    trackPlayerProvider.clearPlaylist();
+    trackPlayerProvider.addAllToPlaylist(albumTracks);
+    trackPlayerProvider.play();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => MusicPlayerPage()),
+    );
+  }
+
+  Future<void> _selectRandomAlbum(
+    BuildContext context,
+    List<Map<String, dynamic>> albumDataList,
+    Logger logger,
+  ) async {
+    if (albumDataList.isNotEmpty) {
+      final trackPlayerProvider =
+          Provider.of<TrackPlayerProvider>(context, listen: false);
+
+      final randomIndex = Random().nextInt(albumDataList.length);
+      final randomAlbum = albumDataList[randomIndex];
+
+      final albumTitle = randomAlbum['album'] as String?;
+
+      if (albumTitle == null || albumTitle.isEmpty) {
+        logger.e('Random album title is null or empty');
+        return;
+      }
+
+      final randomAlbumTracks = randomAlbum['songs'] as List<Track>;
+
+      trackPlayerProvider.clearPlaylist();
+      trackPlayerProvider.addAllToPlaylist(randomAlbumTracks);
+
+      trackPlayerProvider.play();
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => MusicPlayerPage()),
+      );
+      logger.d('Playing random album: $albumTitle');
+    } else {
+      logger.w('No albums available in albumDataList.');
+    }
   }
 }

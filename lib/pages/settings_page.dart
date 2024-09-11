@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/services/isar_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -13,7 +12,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _notificationsEnabled = true;
   ThemeMode _themeMode = ThemeMode.system;
   int _concurrentDownloads = 3;
-  bool _buildXmls = false; // New setting for building XMLs
+  bool _buildXmls = false; 
 
   @override
   void initState() {
@@ -75,7 +74,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ListTile(
             title: const Text('Max Concurrent Downloads'),
             trailing: SizedBox(
-              width: 150, // Adjust width as needed
+              width: 150, 
               child: Row(
                 children: [
                   Expanded(
@@ -98,13 +97,8 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ),
-           ListTile(
-            title: const Text('Clear Database'),
-            onTap: () {
-              _showClearDatabaseConfirmationDialog(context);
-            },
-          ),
- 
+          // Removed the ListTile for clearing the database as it is related to Isar.
+
         ],
       ),
     );
@@ -120,48 +114,4 @@ class _SettingsPageState extends State<SettingsPage> {
         return 'Dark Theme';
     }
   }
-
-
-Future<void> _showClearDatabaseConfirmationDialog(BuildContext context) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false, // user must tap button!
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Clear Database'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: const <Widget>[
-                Text('Are you sure you want to clear the entire database? This action cannot be undone.'),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Clear'),
-              onPressed: () async {
-                // Clear all collections in the Isar database
-
-                await IsarService.clearAllData();
-                
-                Navigator.of(context).pop();
-                // Optionally show a success message
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Database cleared successfully')),
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
-
-
