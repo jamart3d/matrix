@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/pages/settings_page.dart';
+import 'package:huntrix/pages/settings_page.dart';
 
 class MyDrawer extends StatelessWidget {
-  MyDrawer({super.key});
+  const MyDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class MyDrawer extends StatelessWidget {
               );
             },
           ),
-     
+
           ListTile(
             leading: const Icon(Icons.music_note),
             title: const Text("albums list"),

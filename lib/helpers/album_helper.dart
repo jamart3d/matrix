@@ -1,10 +1,4 @@
-import 'package:myapp/models/track.dart';
-import 'package:logger/logger.dart';
-
-
-final _logger = Logger(); // Create a Logger instance
-
-
+import 'package:huntrix/models/track.dart';
 
 
 Map<String, List<Track>> groupTracksByAlbum(List<Track> tracks) {
@@ -16,9 +10,9 @@ Map<String, List<Track>> groupTracksByAlbum(List<Track> tracks) {
   });
 }
 
-
-
-String generateAlbumArt(int albumIndex, {String pathPrefix = 'assets/images/trix_album_art/trix', String extension = '.webp'}) {
+String generateAlbumArt(int albumIndex,
+    {String pathPrefix = 'assets/images/trix_album_art/trix',
+    String extension = '.webp'}) {
   // Add error handling or fallback mechanism if needed
   return '$pathPrefix${albumIndex.toString().padLeft(2, '0')}$extension';
 }
@@ -34,8 +28,4 @@ void assignAlbumArtToTracks(
       track.albumArt = albumArtPath;
     }
   }
-
-
-
-  
 }

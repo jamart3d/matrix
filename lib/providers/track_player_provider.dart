@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:logger/logger.dart';
-import 'package:myapp/models/track.dart';
+import 'package:huntrix/models/track.dart';
 
 class TrackPlayerProvider extends ChangeNotifier {
   final audioPlayer = AudioPlayer();
@@ -34,8 +34,7 @@ class TrackPlayerProvider extends ChangeNotifier {
           : null;
 
   // Constructor - receive the Logger instance
-  TrackPlayerProvider({required Logger logger})
-      : _logger = logger {
+  TrackPlayerProvider({required Logger logger}) : _logger = logger {
     _listenToAudioPlayerEvents(); // Initialize the listener in the constructor
   }
 
@@ -53,7 +52,7 @@ class TrackPlayerProvider extends ChangeNotifier {
     _cachedAlbumTitle = currentlyPlayingSong?.albumName;
 
     // Notify listeners after updating the cached data
-    notifyListeners(); 
+    notifyListeners();
   }
 
   // Getters for cached data
@@ -80,7 +79,7 @@ class TrackPlayerProvider extends ChangeNotifier {
         _logger.i('Now playing: ${_playlist[_currentIndex].trackName}');
 
         // Load album and artist data for the new song
-        loadAlbumAndArtistData(); 
+        loadAlbumAndArtistData();
 
         notifyListeners();
       }
@@ -108,7 +107,7 @@ class TrackPlayerProvider extends ChangeNotifier {
           audioPlayer.play();
         }
 
-        notifyListeners(); 
+        notifyListeners();
       } on Exception catch (e) {
         _logger.e('Error playing audio: $e');
       }
@@ -138,7 +137,7 @@ class TrackPlayerProvider extends ChangeNotifier {
       _currentIndex++;
       await audioPlayer.seek(Duration.zero, index: _currentIndex);
       play(); // Start playing the next song automatically
-      notifyListeners(); 
+      notifyListeners();
     } else {
       // Handle end of playlist (e.g., stop or loop)
       await audioPlayer.stop();
@@ -171,8 +170,7 @@ class TrackPlayerProvider extends ChangeNotifier {
     }
 
     if (_concatenatingAudioSource != null) {
-      _concatenatingAudioSource!
-          .add(AudioSource.uri(Uri.parse(track.url)));
+      _concatenatingAudioSource!.add(AudioSource.uri(Uri.parse(track.url)));
     }
     notifyListeners();
   }
@@ -198,9 +196,7 @@ class TrackPlayerProvider extends ChangeNotifier {
 
     if (_concatenatingAudioSource != null) {
       _concatenatingAudioSource!.addAll(
-        tracks
-            .map((track) => AudioSource.uri(Uri.parse(track.url)))
-            .toList(),
+        tracks.map((track) => AudioSource.uri(Uri.parse(track.url))).toList(),
       );
     }
     notifyListeners();

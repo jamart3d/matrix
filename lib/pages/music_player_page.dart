@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:myapp/components/player/progress_bar.dart';
-import 'package:myapp/pages/track_playlist_page.dart';
-import 'package:myapp/providers/track_player_provider.dart';
+import 'package:huntrix/components/player/progress_bar.dart';
+import 'package:huntrix/pages/track_playlist_page.dart';
+import 'package:huntrix/providers/track_player_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 
 class MusicPlayerPage extends StatelessWidget {
+  const MusicPlayerPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     final trackPlayerProvider = Provider.of<TrackPlayerProvider>(context);
@@ -28,7 +30,7 @@ class MusicPlayerPage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => TrackPlaylistPage(),
+                  builder: (context) => const TrackPlaylistPage(),
                 ),
               );
             },
@@ -124,7 +126,7 @@ class _PlaybackControls extends StatelessWidget {
   final TrackPlayerProvider trackPlayerProvider;
   final Logger logger;
 
-  _PlaybackControls({required this.trackPlayerProvider, required this.logger});
+  const _PlaybackControls({required this.trackPlayerProvider, required this.logger});
 
   @override
   Widget build(BuildContext context) {

@@ -9,7 +9,7 @@ void showFlashMessage(BuildContext context, String message) {
     builder: (context, controller) {
       return FlashBar(
         controller: controller,
-        icon: Icon(Icons.check_circle),
+        icon: const Icon(Icons.check_circle),
         indicatorColor: Colors.deepPurple,
         backgroundColor: const Color.fromARGB(221, 255, 255, 255),
         position: FlashPosition.top,

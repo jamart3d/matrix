@@ -1,11 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'package:myapp/pages/albums_page.dart';
+import 'package:huntrix/pages/albums_page.dart';
 import 'package:provider/provider.dart';
-import 'package:myapp/pages/track_detail_page.dart';
-import 'package:myapp/providers/track_player_provider.dart';
-import 'package:myapp/utils/duration_formatter.dart';
+import 'package:huntrix/pages/track_detail_page.dart';
+import 'package:huntrix/providers/track_player_provider.dart';
+import 'package:huntrix/utils/duration_formatter.dart';
 
 class TrackPlaylistPage extends StatefulWidget {
   const TrackPlaylistPage({Key? key}) : super(key: key);
@@ -31,24 +31,23 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
       appBar: AppBar(
         title:
             // Text('${trackPlayerProvider.playlist.length} Tracks in ${trackPlayerProvider.currentAlbumTitle}'),
-                        Text('${trackPlayerProvider.currentAlbumTitle}'),
+            Text(trackPlayerProvider.currentAlbumTitle),
         actions: [
           IconButton(
-            icon: Icon(Icons.clear),
+            icon: const Icon(Icons.clear),
             onPressed: () {
               showDialog(
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
-                    title: Text('Clear Playlist'),
-                    content:
-                        Text('Clear playlist?'),
+                    title: const Text('Clear Playlist'),
+                    content: const Text('Clear playlist?'),
                     actions: [
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
-                        child: Text('Cancel'),
+                        child: const Text('Cancel'),
                       ),
                       TextButton(
                         onPressed: () {
@@ -56,11 +55,11 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => AlbumsPage(),
+                              builder: (context) => const AlbumsPage(),
                             ),
                           );
                         },
-                        child: Text('Clear'),
+                        child: const Text('Clear'),
                       ),
                     ],
                   );
@@ -75,8 +74,8 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
   }
 
   Widget _buildBody(TrackPlayerProvider trackPlayerProvider) {
-    final currentTrack =
-        trackPlayerProvider.currentlyPlayingSong; // Get the currently playing track
+    final currentTrack = trackPlayerProvider
+        .currentlyPlayingSong; // Get the currently playing track
 
     return Stack(
       children: [
@@ -103,9 +102,6 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
   }
 
   Widget _buildTrackList(TrackPlayerProvider trackPlayerProvider) {
-    // final currentTrack =
-    //     trackPlayerProvider.currentlyPlayingSong; // Get the currently playing track
-
     return Column(
       children: [
         Expanded(
@@ -118,17 +114,15 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
 
               return GestureDetector(
                 onTap: () {
-                      Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      TrackDetailPage(track: track),
-                                ),
-                              );
-             
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TrackDetailPage(track: track),
+                    ),
+                  );
                 },
                 onLongPress: () {
-                        if (!isCurrentlyPlayingTrack) {
+                  if (!isCurrentlyPlayingTrack) {
                     trackPlayerProvider.seekTo(Duration.zero, index: index);
                     trackPlayerProvider.play();
                   }
@@ -138,16 +132,16 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
                   color: Colors.transparent,
                   elevation: 0,
                   child: ListTile(
-                  
                     title: Text(
                       track.trackName,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: isCurrentlyPlayingTrack
                               ? Colors.yellow
                               : Colors.white,
                           fontWeight: FontWeight.bold),
                     ),
-                    
                     trailing: Text(
                       formatDurationSeconds(track.trackDuration),
                       style: TextStyle(

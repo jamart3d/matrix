@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -11,8 +11,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   bool _notificationsEnabled = true;
   ThemeMode _themeMode = ThemeMode.system;
-  int _concurrentDownloads = 3;
-  bool _buildXmls = false; 
 
   @override
   void initState() {
@@ -25,8 +23,6 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
       _themeMode = ThemeMode.values[prefs.getInt('themeMode') ?? 0];
-      _concurrentDownloads = prefs.getInt('concurrentDownloads') ?? 3;
-      _buildXmls = prefs.getBool('buildXmls') ?? false;
     });
   }
 
@@ -34,8 +30,6 @@ class _SettingsPageState extends State<SettingsPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notificationsEnabled', _notificationsEnabled);
     await prefs.setInt('themeMode', _themeMode.index);
-    await prefs.setInt('concurrentDownloads', _concurrentDownloads);
-    await prefs.setBool('buildXmls', _buildXmls);
   }
 
   @override
@@ -58,47 +52,6 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ),
-          ListTile(
-            title: const Text('Build XMLs'),
-            trailing: Switch(
-              value: _buildXmls,
-              onChanged: (value) {
-                setState(() {
-                  _buildXmls = value;
-                  print(value);
-                  _saveSettings();
-                });
-              },
-            ),
-          ),
-          ListTile(
-            title: const Text('Max Concurrent Downloads'),
-            trailing: SizedBox(
-              width: 150, 
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Slider(
-                      value: _concurrentDownloads.toDouble(),
-                      min: 1,
-                      max: 5,
-                      divisions: 4,
-                      label: _concurrentDownloads.toString(),
-                      onChanged: (value) {
-                        setState(() {
-                          _concurrentDownloads = value.toInt();
-                          _saveSettings();
-                        });
-                      },
-                    ),
-                  ),
-                  Text(_concurrentDownloads.toString()),
-                ],
-              ),
-            ),
-          ),
-          // Removed the ListTile for clearing the database as it is related to Isar.
-
         ],
       ),
     );

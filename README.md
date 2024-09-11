@@ -1,4 +1,4 @@
-# myapp
+# huntrix
 
 A new Flutter project.
 

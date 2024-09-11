@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/providers/track_player_provider.dart';
+import 'package:huntrix/providers/track_player_provider.dart';
 
 class ProgressBar extends StatelessWidget {
   final TrackPlayerProvider provider;
 
-  const ProgressBar({Key? key, required this.provider}) : super(key: key);
+  const ProgressBar({super.key, required this.provider});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0), 
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       height: 30.0,
       child: StreamBuilder<Duration?>(
         stream: provider.positionStream,
@@ -32,12 +32,16 @@ class ProgressBar extends StatelessWidget {
                   Expanded(
                     child: Semantics(
                       label: 'Seek slider',
-                      value: '${provider.formatDuration(position)} of ${provider.formatDuration(duration)}',
+                      value:
+                          '${provider.formatDuration(position)} of ${provider.formatDuration(duration)}',
                       child: SliderTheme(
                         data: SliderTheme.of(context).copyWith(
-                          thumbShape: RoundSliderThumbShape(enabledThumbRadius: 4.0),
-                          overlayShape: RoundSliderOverlayShape(overlayRadius: 10.0),
-                          valueIndicatorShape: PaddleSliderValueIndicatorShape(),
+                          thumbShape:
+                              const RoundSliderThumbShape(enabledThumbRadius: 4.0),
+                          overlayShape:
+                              const RoundSliderOverlayShape(overlayRadius: 10.0),
+                          valueIndicatorShape:
+                              const PaddleSliderValueIndicatorShape(),
                           valueIndicatorTextStyle: const TextStyle(
                             color: Colors.white,
                           ),

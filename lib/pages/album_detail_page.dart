@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:myapp/models/track.dart';
-import 'package:myapp/utils/duration_formatter.dart';
+import 'package:huntrix/models/track.dart';
+import 'package:huntrix/utils/duration_formatter.dart';
 
 class AlbumDetailPage extends StatelessWidget {
   final List<Track> tracks;
@@ -10,11 +10,10 @@ class AlbumDetailPage extends StatelessWidget {
   final String albumName;
 
   const AlbumDetailPage(
-      {Key? key,
+      {super.key,
       required this.tracks,
       required this.albumArt,
-      required this.albumName})
-      : super(key: key);
+      required this.albumName});
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +58,7 @@ class AlbumDetailPage extends StatelessWidget {
                   // Album Name (White)
                   Text(
                     albumName,
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white),
@@ -85,15 +84,15 @@ class AlbumDetailPage extends StatelessWidget {
           return ListTile(
             leading: Text(
               (index + 1).toString(),
-              style: TextStyle(color: Colors.white, fontSize: 18),
+              style: const TextStyle(color: Colors.white, fontSize: 18),
             ),
             title: Text(
               track.trackName,
-              style: TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
             trailing: Text(
               formatDurationSeconds(track.trackDuration),
-              style: TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           );
         },

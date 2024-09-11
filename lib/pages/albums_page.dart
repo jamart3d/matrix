@@ -1,18 +1,18 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:myapp/components/my_drawer.dart';
-import 'package:myapp/helpers/album_helper.dart';
-import 'package:myapp/models/track.dart';
-import 'package:myapp/pages/album_detail_page.dart';
-import 'package:myapp/pages/music_player_page.dart';
-import 'package:myapp/providers/track_player_provider.dart';
+import 'package:huntrix/components/my_drawer.dart';
+import 'package:huntrix/helpers/album_helper.dart';
+import 'package:huntrix/models/track.dart';
+import 'package:huntrix/pages/album_detail_page.dart';
+import 'package:huntrix/pages/music_player_page.dart';
+import 'package:huntrix/providers/track_player_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:myapp/utils/load_json_data.dart';
+import 'package:huntrix/utils/load_json_data.dart';
 import 'package:logger/logger.dart';
 
 class AlbumsPage extends StatefulWidget {
-  const AlbumsPage({Key? key}) : super(key: key);
+  const AlbumsPage({super.key});
 
   @override
   _AlbumsPageState createState() => _AlbumsPageState();
@@ -72,13 +72,13 @@ class _AlbumsPageState extends State<AlbumsPage> {
         title: const Text("Hunters Trix"),
         actions: _buildAppBarActions(context),
       ),
-      drawer: MyDrawer(),
+      drawer: const MyDrawer(),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => MusicPlayerPage()),
+            MaterialPageRoute(builder: (context) => const MusicPlayerPage()),
           );
         },
         child: const Icon(Icons.play_circle),
@@ -129,9 +129,10 @@ class _AlbumsPageState extends State<AlbumsPage> {
             // height: 50,
             fit: BoxFit.cover,
           ),
-          title: Text(albumName,
-          softWrap: true,
-          overflow: TextOverflow.ellipsis,
+          title: Text(
+            albumName,
+            softWrap: true,
+            overflow: TextOverflow.ellipsis,
           ),
           onTap: () {
             Navigator.push(
@@ -162,7 +163,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => MusicPlayerPage()),
+      MaterialPageRoute(builder: (context) => const MusicPlayerPage()),
     );
   }
 
@@ -194,7 +195,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
 
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => MusicPlayerPage()),
+        MaterialPageRoute(builder: (context) => const MusicPlayerPage()),
       );
       logger.d('Playing random album: $albumTitle');
     } else {

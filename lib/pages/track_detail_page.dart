@@ -1,9 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:myapp/utils/duration_formatter.dart';
-
-// Import for the Track class
-import 'package:myapp/models/track.dart'; 
+import 'package:huntrix/utils/duration_formatter.dart';
+import 'package:huntrix/models/track.dart';
 
 class TrackDetailPage extends StatelessWidget {
   final Track track;
@@ -26,16 +24,19 @@ class TrackDetailPage extends StatelessWidget {
           ),
         ),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), // Adjust blur intensity as needed
+          filter: ImageFilter.blur(
+              sigmaX: 10.0, sigmaY: 10.0), // Adjust blur intensity as needed
           child: Container(
-            color: Colors.black.withOpacity(0.5), // Add a semi-transparent overlay for better contrast
+            color: Colors.black.withOpacity(
+                0.5), // Add a semi-transparent overlay for better contrast
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView( // Add SingleChildScrollView for vertical scrolling
-                child: Card( 
+              child: SingleChildScrollView(
+                // Add SingleChildScrollView for vertical scrolling
+                child: Card(
                   // Make the card completely transparent
-                  color: Colors.transparent, 
-                  elevation: 0, 
+                  color: Colors.transparent,
+                  elevation: 0,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -53,16 +54,20 @@ class TrackDetailPage extends StatelessWidget {
                           Container(
                             height: 200,
                             child: Center(
-                              child: Text('No Album Art Available', style: TextStyle(color: Colors.white)),
+                              child: Text('No Album Art Available',
+                                  style: TextStyle(color: Colors.white)),
                             ),
                           ),
 
-                        SizedBox(height: 16), 
+                        SizedBox(height: 16),
 
                         // Track details with white text color
                         Text(
                           track.trackName,
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
                         ),
                         SizedBox(height: 8),
                         Text(
@@ -96,5 +101,4 @@ class TrackDetailPage extends StatelessWidget {
       ),
     );
   }
-
 }
