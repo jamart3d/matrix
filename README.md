@@ -1,16 +1,19 @@
 # huntrix
 
-A new Flutter project.
-
+A Flutter project to list and play Hunter's Matrix Grateful Dead shows hosted on archive.org.
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+This is a simple project for me learn dart / flutter, and getting to know Google's Project IDX
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Features
+plays audio from internet
+gapless playback
+select and play random show
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+todo:
+background playback
+work on ios
+download for offline playback
+
+

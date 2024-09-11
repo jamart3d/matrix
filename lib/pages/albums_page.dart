@@ -25,6 +25,12 @@ class _AlbumsPageState extends State<AlbumsPage> {
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    // Access Logger here
+    super.didChangeDependencies();
     logger = context.read<Logger>();
     _loadData();
   }
