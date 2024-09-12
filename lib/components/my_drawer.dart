@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:huntrix/pages/albums_list_wheel_page.dart';
 import 'package:huntrix/pages/settings_page.dart';
+import 'package:huntrix/pages/albums_page.dart';
 
 class MyDrawer extends StatelessWidget {
   const MyDrawer({super.key});
@@ -38,18 +40,35 @@ class MyDrawer extends StatelessWidget {
             title: const Text("albums list"),
             onTap: () {
               Navigator.pop(context);
+                            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) =>  const AlbumsPage()),
+              );
+
             },
           ),
+      
           ListTile(
             leading: const Icon(Icons.music_note),
-            title: const Text("songs list"),
+            title: const Text("albums wheel"),
             onTap: () {
               Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const AlbumListWheelPage()),
+              );
             },
           ),
+
           // Removed the ListTile for adding random album as it is not needed anymore.
         ],
       ),
     );
   }
+}
+
+class AlbumsListPage {
+  const AlbumsListPage();
 }

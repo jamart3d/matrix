@@ -8,7 +8,7 @@ import 'package:huntrix/providers/track_player_provider.dart';
 import 'package:huntrix/utils/duration_formatter.dart';
 
 class TrackPlaylistPage extends StatefulWidget {
-  const TrackPlaylistPage({Key? key}) : super(key: key);
+  const TrackPlaylistPage({super.key});
 
   @override
   _TrackPlaylistPageState createState() => _TrackPlaylistPageState();

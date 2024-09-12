@@ -35,7 +35,7 @@ class TrackPlayerProvider extends ChangeNotifier {
 
   // Constructor - receive the Logger instance
   TrackPlayerProvider({required Logger logger}) : _logger = logger {
-    _listenToAudioPlayerEvents(); // Initialize the listener in the constructor
+    _listenToAudioPlayerEvents();
   }
 
   // Load album and artist data, and cache them for current song
@@ -52,7 +52,9 @@ class TrackPlayerProvider extends ChangeNotifier {
     _cachedAlbumTitle = currentlyPlayingSong?.albumName;
 
     // Notify listeners after updating the cached data
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // Getters for cached data
@@ -66,8 +68,7 @@ class TrackPlayerProvider extends ChangeNotifier {
     // Playback State
     audioPlayer.playerStateStream.listen((playerState) {
       _logger.d('Player state changed: ${playerState.processingState}');
-      // You can handle different player states here if needed
-      // For example, show a loading indicator while buffering
+      // Handle different player states here if needed
     });
 
     // Song Completion and Playlist Advancement
@@ -80,8 +81,6 @@ class TrackPlayerProvider extends ChangeNotifier {
 
         // Load album and artist data for the new song
         loadAlbumAndArtistData();
-
-        notifyListeners();
       }
     });
   }
@@ -107,7 +106,10 @@ class TrackPlayerProvider extends ChangeNotifier {
           audioPlayer.play();
         }
 
-        notifyListeners();
+        // Notify listeners after playing has started
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
       } on Exception catch (e) {
         _logger.e('Error playing audio: $e');
       }
@@ -121,7 +123,9 @@ class TrackPlayerProvider extends ChangeNotifier {
       _logger.d('Changing song index to: $index');
       _currentIndex = index;
       audioPlayer.seek(Duration.zero, index: index);
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     } else {
       _logger.e('Invalid song index: $index');
     }
@@ -129,7 +133,9 @@ class TrackPlayerProvider extends ChangeNotifier {
 
   Future<void> pause() async {
     await audioPlayer.pause();
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   Future<void> next() async {
@@ -137,11 +143,15 @@ class TrackPlayerProvider extends ChangeNotifier {
       _currentIndex++;
       await audioPlayer.seek(Duration.zero, index: _currentIndex);
       play(); // Start playing the next song automatically
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     } else {
       // Handle end of playlist (e.g., stop or loop)
       await audioPlayer.stop();
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     }
   }
 
@@ -156,7 +166,9 @@ class TrackPlayerProvider extends ChangeNotifier {
       // If at the beginning of the playlist, go to the beginning of the first song
       audioPlayer.seek(Duration.zero);
     }
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // Playlist management methods
@@ -172,7 +184,9 @@ class TrackPlayerProvider extends ChangeNotifier {
     if (_concatenatingAudioSource != null) {
       _concatenatingAudioSource!.add(AudioSource.uri(Uri.parse(track.url)));
     }
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   void clearPlaylist() {
@@ -182,7 +196,9 @@ class TrackPlayerProvider extends ChangeNotifier {
     _currentIndex = 0;
     _concatenatingAudioSource = null;
     _logger.d('Playlist cleared.');
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   void addAllToPlaylist(List<Track> tracks) async {
@@ -199,7 +215,9 @@ class TrackPlayerProvider extends ChangeNotifier {
         tracks.map((track) => AudioSource.uri(Uri.parse(track.url))).toList(),
       );
     }
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   String formatDuration(Duration duration) {

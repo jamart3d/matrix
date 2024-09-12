@@ -6,7 +6,7 @@ import 'package:huntrix/models/track.dart';
 class TrackDetailPage extends StatelessWidget {
   final Track track;
 
-  const TrackDetailPage({Key? key, required this.track}) : super(key: key);
+  const TrackDetailPage({super.key, required this.track});
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +51,7 @@ class TrackDetailPage extends StatelessWidget {
                           )
                         else
                           // Placeholder image or text if album art is not available
-                          Container(
+                          const SizedBox(
                             height: 200,
                             child: Center(
                               child: Text('No Album Art Available',
@@ -59,35 +59,35 @@ class TrackDetailPage extends StatelessWidget {
                             ),
                           ),
 
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
                         // Track details with white text color
                         Text(
                           track.trackName,
-                          style: TextStyle(
+                          style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.white),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           'Artist: ${track.artistName ?? track.trackArtistName}',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
+                          style: const TextStyle(fontSize: 18, color: Colors.white),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
                           'Album: ${track.albumName}',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+                          style: const TextStyle(fontSize: 16, color: Colors.white),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
                           'Track Number: ${track.trackNumber}',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+                          style: const TextStyle(fontSize: 16, color: Colors.white),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
                           'Duration: ${formatDurationSeconds(track.trackDuration)}',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+                          style: const TextStyle(fontSize: 16, color: Colors.white),
                         ),
                         // Add more track details as needed
                       ],

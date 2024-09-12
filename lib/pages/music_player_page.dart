@@ -6,8 +6,20 @@ import 'package:huntrix/providers/track_player_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 
-class MusicPlayerPage extends StatelessWidget {
+class MusicPlayerPage extends StatefulWidget {
   const MusicPlayerPage({super.key});
+
+  @override
+  _MusicPlayerPageState createState() => _MusicPlayerPageState();
+}
+
+class _MusicPlayerPageState extends State<MusicPlayerPage> {
+  @override
+  void initState() {
+    super.initState();
+    final trackPlayerProvider = Provider.of<TrackPlayerProvider>(context, listen: false);
+    trackPlayerProvider.loadAlbumAndArtistData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +27,6 @@ class MusicPlayerPage extends StatelessWidget {
     final logger = Provider.of<Logger>(context);
 
     logger.d('Building MusicPlayerPage');
-
-    // Load album and artist data (will use cached data if applicable)
-    trackPlayerProvider.loadAlbumAndArtistData();
 
     return Scaffold(
       appBar: AppBar(
@@ -52,19 +61,14 @@ class MusicPlayerPage extends StatelessWidget {
                     children: [
                       // Track Title
                       Text(
-                        trackPlayerProvider
-                            .playlist[trackPlayerProvider.currentIndex]
-                            .trackName,
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center, // Center the text
+                        trackPlayerProvider.playlist[trackPlayerProvider.currentIndex].trackName,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
                       ),
-                      const Gap.expand(10),
+                      const Gap(10),
 
                       // Playback Controls
-                      _PlaybackControls(
-                          trackPlayerProvider: trackPlayerProvider,
-                          logger: logger),
+                      _PlaybackControls(trackPlayerProvider: trackPlayerProvider, logger: logger),
                       const SizedBox(height: 10),
 
                       // Progress Bar
@@ -75,7 +79,7 @@ class MusicPlayerPage extends StatelessWidget {
                       Text(
                         trackPlayerProvider.currentAlbumTitle,
                         style: const TextStyle(fontSize: 16),
-                        textAlign: TextAlign.center, // Center the text
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -85,35 +89,23 @@ class MusicPlayerPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAlbumArt(
-      TrackPlayerProvider trackPlayerProvider, BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final screenWidth = mediaQuery.size.width;
-    final screenHeight = mediaQuery.size.height;
+  Widget _buildAlbumArt(TrackPlayerProvider trackPlayerProvider, BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final albumArtHeight = (screenHeight * 0.5).toInt();
 
-    // Calculate the desired height for the album art
-    final albumArtHeight =
-        (screenHeight * 0.5).toInt(); // Adjust the 0.5 factor as needed
-
-    // Use the calculated height and width to set the album art size
     return Center(
       child: SizedBox(
         width: screenWidth,
         height: albumArtHeight.toDouble(),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4.0),
-          ),
-          child: ClipRRect(
-            // Apply rounded corners to the image directly
-            borderRadius: BorderRadius.circular(4.0),
-            child: Image.asset(
-              trackPlayerProvider.currentAlbumArt,
-              fit: BoxFit.cover, // Ensure the image covers the entire container
-              errorBuilder: (context, error, stackTrace) {
-                return Image.asset('assets/images/t_steal.webp');
-              },
-            ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4.0),
+          child: Image.asset(
+            trackPlayerProvider.currentAlbumArt,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Image.asset('assets/images/t_steal.webp');
+            },
           ),
         ),
       ),
@@ -131,8 +123,7 @@ class _PlaybackControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<bool>(
-      stream: trackPlayerProvider
-          .audioPlayer.playingStream, // Listen to the playing stream
+      stream: trackPlayerProvider.audioPlayer.playingStream,
       builder: (context, snapshot) {
         final isPlaying = snapshot.data ?? false;
 
@@ -140,11 +131,7 @@ class _PlaybackControls extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
-              icon: const Icon(
-                Icons.skip_previous,
-                size: 40,
-                color: Colors.deepPurple,
-              ),
+              icon: const Icon(Icons.skip_previous, size: 40, color: Colors.deepPurple),
               onPressed: () {
                 trackPlayerProvider.previous();
                 logger.i('Previous button pressed');
@@ -153,8 +140,8 @@ class _PlaybackControls extends StatelessWidget {
             IconButton(
               icon: Icon(
                 isPlaying ? Icons.pause_circle : Icons.play_circle,
-                color: Colors.deepPurple,
                 size: 60,
+                color: Colors.deepPurple,
               ),
               onPressed: () {
                 if (isPlaying) {
@@ -167,11 +154,7 @@ class _PlaybackControls extends StatelessWidget {
               },
             ),
             IconButton(
-              icon: const Icon(
-                Icons.skip_next,
-                size: 40,
-                color: Colors.deepPurple,
-              ),
+              icon: const Icon(Icons.skip_next, size: 40, color: Colors.deepPurple),
               onPressed: () {
                 trackPlayerProvider.next();
                 logger.i('Next button pressed');
@@ -184,6 +167,7 @@ class _PlaybackControls extends StatelessWidget {
   }
 }
 
+// Progress Bar Widget
 class _ProgressBar extends StatelessWidget {
   final TrackPlayerProvider trackPlayerProvider;
 

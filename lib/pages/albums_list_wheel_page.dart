@@ -11,14 +11,14 @@ import 'package:provider/provider.dart';
 import 'package:huntrix/utils/load_json_data.dart';
 import 'package:logger/logger.dart';
 
-class AlbumsPage extends StatefulWidget {
-  const AlbumsPage({super.key});
+class AlbumListWheelPage extends StatefulWidget {
+  const AlbumListWheelPage({super.key});
 
   @override
-  _AlbumsPageState createState() => _AlbumsPageState();
+  State<AlbumListWheelPage> createState() => _AlbumListWheelPageState();
 }
 
-class _AlbumsPageState extends State<AlbumsPage> {
+class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
   late Logger logger;
   List<Map<String, dynamic>>? _cachedAlbumData;
   String? _currentAlbumArt; // To store current album art
@@ -32,28 +32,27 @@ class _AlbumsPageState extends State<AlbumsPage> {
 
   @override
   void didChangeDependencies() {
-    // Access Logger here
     super.didChangeDependencies();
     logger = context.read<Logger>();
-    _loadData();
+
+    // Restore the current album art and name from TrackPlayerProvider
+    final trackPlayerProvider = Provider.of<TrackPlayerProvider>(context, listen: false);
+    final currentlyPlayingSong = trackPlayerProvider.currentlyPlayingSong;
+
+    if (currentlyPlayingSong != null) {
+      _currentAlbumArt = currentlyPlayingSong.albumArt;
+      _currentAlbumName = currentlyPlayingSong.albumName;
+    }
+
+    _loadData(); // Load album data
   }
 
   Future<void> _loadData() async {
     try {
       if (_cachedAlbumData == null) {
         final tracks = await loadJsonData(context);
-        logger.d("LOADED Albums JSON: ${tracks.length}");
+        logger.d("LOADED Wheel JSON: ${tracks.length}");
         final albumTracks = groupTracksByAlbum(tracks);
-
-        // Precache images, checking for null albumArt
-        await Future.wait(albumTracks.values.map((trackList) {
-          if (trackList.first.albumArt != null) {
-            return precacheImage(AssetImage(trackList.first.albumArt!), context);
-          } else {
-            return Future.value(); // Return a completed future if albumArt is null
-          }
-        }));
-
         setState(() {
           _cachedAlbumData = _createAlbumDataList(albumTracks);
         });
@@ -63,8 +62,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
     }
   }
 
-  List<Map<String, dynamic>> _createAlbumDataList(
-      Map<String, List<Track>> albumTracks) {
+  List<Map<String, dynamic>> _createAlbumDataList(Map<String, List<Track>> albumTracks) {
     final Map<String, int> albumIndex = {};
     int index = 1;
     for (final albumName in albumTracks.keys) {
@@ -77,8 +75,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
               'album': entry.key,
               'songs': entry.value,
               'songCount': entry.value.length,
-              'artistName': entry.value.first.artistName ??
-                  entry.value.first.trackArtistName,
+              'artistName': entry.value.first.artistName ?? entry.value.first.trackArtistName,
               'albumArt': entry.value.first.albumArt,
             })
         .toList();
@@ -88,7 +85,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Hunters Trix"),
+        title: const Text("Album Wheel"),
         actions: _buildAppBarActions(context),
       ),
       drawer: const MyDrawer(),
@@ -100,16 +97,14 @@ class _AlbumsPageState extends State<AlbumsPage> {
             fit: BoxFit.cover,
             colorFilter: _currentAlbumArt != null
                 ? null
-                : ColorFilter.mode(
-                    Colors.black.withOpacity(0.3),
-                    BlendMode.darken,
-                  ),
+                : ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken),
           ),
         ),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), // Blur effect
           child: Stack(
             children: [
+              // Album list wheel
               _buildBody(),
             ],
           ),
@@ -140,8 +135,8 @@ class _AlbumsPageState extends State<AlbumsPage> {
     if (_cachedAlbumData != null) {
       _selectRandomAlbum(context, _cachedAlbumData!, logger);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please wait for albums to load')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please wait for albums to load')));
     }
   }
 
@@ -151,42 +146,40 @@ class _AlbumsPageState extends State<AlbumsPage> {
     } else if (_cachedAlbumData!.isEmpty) {
       return const Center(child: Text("No albums available."));
     } else {
-      return _buildAlbumList();
+      return _buildAlbumWheel();
     }
   }
 
-  Widget _buildAlbumList() {
-    return ListView.builder(
-      itemCount: _cachedAlbumData?.length ?? 0,
-      itemBuilder: (context, index) {
-        final albumData = _cachedAlbumData![index];
-        final albumName = albumData['album'] as String;
-        final albumArt = albumData['albumArt'] as String;
+  Widget _buildAlbumWheel() {
+    const int infiniteScrollMultiplier = 1000; // Number of times to repeat the album list
 
-        return SizedBox(
-          // height: 200, 
-          child: ListTile(
-            leading: SizedBox(
-              // height: double.infinity,
-              // width: 200, 
-              child: Image.asset(
-                albumArt, // Use albumArt directly, assuming it's not null
-                fit: BoxFit.cover,
-              ),
-            ),
-            title: Text(
-              albumName,
-              style: TextStyle(
-                color: _currentAlbumName == albumName
-                    ? Colors.yellow
-                    : Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              maxLines: 1,
-              softWrap: true,
-              overflow: TextOverflow.ellipsis,
-            ),
-            contentPadding: EdgeInsets.zero, 
+    return ListWheelScrollView.useDelegate(
+      itemExtent: 250, // Height of each item
+      diameterRatio: 3.0, // Curve of the wheel
+      physics: const FixedExtentScrollPhysics(), // Snapping effect
+      onSelectedItemChanged: (index) {
+        // Use modulo to wrap around the list
+        // final actualIndex = index % _cachedAlbumData!.length;
+        // final albumData = _cachedAlbumData![actualIndex];
+
+        // setState(() {
+        //   _currentAlbumArt = albumData['albumArt'] as String;
+        //   _currentAlbumName = albumData['album'] as String;
+        // });
+      },
+      childDelegate: ListWheelChildBuilderDelegate(
+        builder: (context, index) {
+          if (_cachedAlbumData == null || _cachedAlbumData!.isEmpty) {
+            return null; // Guard clause for empty data
+          }
+
+          // Modulo operation to simulate infinite looping
+          final actualIndex = index % _cachedAlbumData!.length;
+          final albumData = _cachedAlbumData![actualIndex];
+          final albumName = albumData['album'] as String;
+          final albumArt = albumData['albumArt'] as String;
+
+          return GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
@@ -200,15 +193,30 @@ class _AlbumsPageState extends State<AlbumsPage> {
               );
             },
             onLongPress: () => _handleAlbumTap(albumData),
-          ),
-        );
-      },
+            child: Card(
+              elevation: 22,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: _currentAlbumName == albumName ? Colors.yellow : Colors.black,
+                  width: 2,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                albumArt,
+                fit: BoxFit.fitWidth,
+              ),
+            ),
+          );
+        },
+        childCount: _cachedAlbumData == null ? 0 : _cachedAlbumData!.length * infiniteScrollMultiplier,
+      ),
     );
   }
 
   void _handleAlbumTap(Map<String, dynamic> albumData) {
-    final trackPlayerProvider =
-        Provider.of<TrackPlayerProvider>(context, listen: false);
+    final trackPlayerProvider = Provider.of<TrackPlayerProvider>(context, listen: false);
     final albumTracks = albumData['songs'] as List<Track>;
 
     trackPlayerProvider.clearPlaylist();
@@ -220,10 +228,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
       MaterialPageRoute(builder: (context) => const MusicPlayerPage()),
     );
 
-    // Update the background with the current album art
     setState(() {
       _currentAlbumArt = albumData['albumArt'] as String;
-      _currentAlbumName = albumData['album'] as String; 
+      _currentAlbumName = albumData['album'] as String;
     });
   }
 
@@ -233,8 +240,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
     Logger logger,
   ) async {
     if (albumDataList.isNotEmpty) {
-      final trackPlayerProvider =
-          Provider.of<TrackPlayerProvider>(context, listen: false);
+      final trackPlayerProvider = Provider.of<TrackPlayerProvider>(context, listen: false);
 
       final randomIndex = Random().nextInt(albumDataList.length);
       final randomAlbum = albumDataList[randomIndex];
@@ -259,10 +265,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
       );
       logger.d('Playing random album: $albumTitle');
 
-      // Update the background with the current album art
       setState(() {
         _currentAlbumArt = randomAlbum['albumArt'] as String;
-        _currentAlbumName = randomAlbum['album'] as String; 
+        _currentAlbumName = randomAlbum['album'] as String;
       });
     } else {
       logger.w('No albums available in albumDataList.');
