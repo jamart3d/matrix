@@ -14,9 +14,6 @@ select and play random album/show
 todo:<BR>
 andriod auto<BR>
 google tv<BR>
-get images to preCache properly<BR>
-fix launcher icons, something todo with mipmap-anydpi-v26 folder in res<BR>
-add better transistion animations<BR>
 add theme switch<BR>
 deployment on ios<BR>
 download and or save cached audio for offline playback<BR>
