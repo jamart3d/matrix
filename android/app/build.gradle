@@ -23,15 +23,16 @@ if (flutterVersionName == null) {
     flutterVersionName = "1.0"
 }
 
-def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file('key.properties')
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+// This block loads your key.properties file securely.
+def keyProperties = new Properties()
+def keyPropertiesFile = rootProject.file('key.properties')
+if (keyPropertiesFile.exists()) {
+    keyProperties.load(new FileInputStream(keyPropertiesFile))
 }
 
 android {
     namespace = "com.jamart3d.huntrix"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -39,37 +40,51 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    // This block defines the signing configurations for your app.
+    // signingConfigs {
+    //     release {
+    //         // This 'if' block makes sure the build doesn't fail if key.properties is missing.
+    //         if (keyProperties.storeFile != null) {
+    //             storeFile file(keyProperties.storeFile)
+    //             storePassword keyProperties.storePassword
+    //             keyAlias keyProperties.keyAlias // <-- This will correctly read 'upload' from key.properties
+    //             keyPassword keyProperties.keyPassword
+    //         }
+            
+    //     }
+    // }
+
+    signingConfigs {
+    release {
+        // --- TEMPORARY TEST ---
+        storeFile file('upload-keystore.jks') // Path is relative to this build.gradle file
+        storePassword '1Whitebiju'
+        keyAlias 'upload'
+        keyPassword '1Whitebiju'
+    }
+}
+
     defaultConfig {
         applicationId = "com.jamart3d.huntrix"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 21
+        targetSdk = 34
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
     }
 
-android {
-    signingConfigs {
-        release {
-            keyAlias = keystoreProperties['keyAlias']
-            keyPassword = keystoreProperties['keyPassword']
-            storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-            storePassword = keystoreProperties['storePassword']
-        }
-    }
+    // This block tells Gradle which signing configuration to use for each build type.
     buildTypes {
         release {
-            signingConfig = signingConfigs.debug
-            signingConfig = signingConfigs.release
-        }
-    }
-}
+            // This is the most important line: it links the 'release' build to your signing config.
+            signingConfig signingConfigs.release
 
-
-    buildTypes {
-        release {
-            signingConfig = signingConfigs.debug
-            signingConfig = signingConfigs.release
-
+            // Enables code shrinking, obfuscation, and optimization for your release build.
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }

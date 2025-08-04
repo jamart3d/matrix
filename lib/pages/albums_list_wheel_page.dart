@@ -10,6 +10,7 @@ import 'package:huntrix/utils/album_utils.dart';
 import 'package:provider/provider.dart';
 import 'package:huntrix/utils/load_json_data.dart';
 import 'package:huntrix/providers/album_settings_provider.dart';
+import 'package:logger/logger.dart';
 
 class AlbumListWheelPage extends StatefulWidget {
   const AlbumListWheelPage({super.key});
@@ -19,125 +20,154 @@ class AlbumListWheelPage extends StatefulWidget {
 }
 
 class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
+  final _logger = Logger(printer: PrettyPrinter(methodCount: 1));
+  
+  // State variables
   List<Map<String, dynamic>>? _cachedAlbumData;
-  String? _currentAlbumName;
   String _currentAlbumArt = 'assets/images/t_steal.webp';
-  late FixedExtentScrollController _scrollController;
+  String? _currentAlbumName;
+  bool _isDataLoading = true;
+
+  // Controllers
+  late final FixedExtentScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
     _scrollController = FixedExtentScrollController();
-  }
-
-  void _preloadFirstThreeAlbums() {
-    if (_cachedAlbumData == null || !mounted) return;
-
-    for (int i = 0; i < 6 && i < _cachedAlbumData!.length; i++) {
-      final String albumArt = _cachedAlbumData![i]['albumArt'] as String;
-      precacheImage(AssetImage(albumArt), context);
-    }
+    _initializePage();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Fetch the current song from TrackPlayerProvider
-    final trackPlayerProvider = context.watch<TrackPlayerProvider>();
-    final currentlyPlayingSong = trackPlayerProvider.currentlyPlayingSong;
-
-    String? newAlbumArt;
-    String? newAlbumName;
-
-    if (currentlyPlayingSong != null &&
-        (currentlyPlayingSong.albumArt != _currentAlbumArt)) {
-      // Update album art and name only when necessary
-      newAlbumArt = currentlyPlayingSong.albumArt;
-      newAlbumName = currentlyPlayingSong.albumName;
-      if (!newAlbumName.startsWith('19')) {
-        newAlbumName =
-            '19$newAlbumName'; // No need for ! here since we've checked for null
-      }
-      setState(() {
-        if (newAlbumArt != null) _currentAlbumArt = newAlbumArt;
-        if (newAlbumName != null) _currentAlbumName = newAlbumName;
-      });
-    }
-
-    // Load album data
-    loadData(context, (albumData) {
-      if (albumData != null) {
-        preloadAlbumImages(albumData, context);
-      }
-
-      if (albumData != null || newAlbumArt != null || newAlbumName != null) {
-        setState(() {
-          _cachedAlbumData = albumData ?? _cachedAlbumData;
-        });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToCurrentAlbum();
-        });
-      }
-    });
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
-  void _scrollToCurrentAlbum() {
-    if (_currentAlbumName != null && _cachedAlbumData != null) {
-      final index = _cachedAlbumData!
-          .indexWhere((album) => album['album'] == _currentAlbumName);
-      if (index != -1) {
-        final itemExtent = MediaQuery.of(context).size.height * 0.8 / 1.6;
-        _scrollController.animateTo(
-          index * itemExtent,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
+  Future<void> _initializePage() async {
+    await _loadAlbumData();
+    _setupInitialAlbumScroll();
+  }
+
+  Future<void> _loadAlbumData() async {
+    try {
+      _logger.i("Loading album data for list wheel...");
+      await loadData(context, (albumData) {
+        if (mounted) {
+          setState(() {
+            _cachedAlbumData = albumData;
+            _isDataLoading = false;
+          });
+          if (albumData != null) {
+            preloadAlbumImages(albumData, context);
+          }
+        }
+      });
+    } catch (e) {
+      if(mounted) {
+        setState(() => _isDataLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error loading album data."), backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  // Handle loaded album data and preload images
-  void _handleDataLoaded(List<Map<String, dynamic>>? albumData) {
-    setState(() {
-      _cachedAlbumData = albumData;
-    });
+  void _setupInitialAlbumScroll() {
+    if (!mounted) return;
+    final currentlyPlaying = context.read<TrackPlayerProvider>().currentlyPlayingSong;
+    if (currentlyPlaying != null) {
+      _updateCurrentAlbum(currentlyPlaying);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrentAlbum(animate: false));
+    }
+  }
 
-    if (albumData != null) {
-      preloadAlbumImages(albumData, context);
-      _preloadFirstThreeAlbums();
+  void _updateCurrentAlbum(Track? currentlyPlayingSong) {
+    if (currentlyPlayingSong == null) {
+      // Handle player stopping
+      if (_currentAlbumName != null) {
+        setState(() {
+          _currentAlbumName = null;
+          _currentAlbumArt = 'assets/images/t_steal.webp';
+        });
+      }
+      return;
+    }
+    
+    final newAlbumArt = currentlyPlayingSong.albumArt ?? 'assets/images/t_steal.webp';
+    final newAlbumName = currentlyPlayingSong.albumName;
+    
+    if (newAlbumArt != _currentAlbumArt || newAlbumName != _currentAlbumName) {
+      _logger.d("Provider changed album. Updating wheel UI for: $newAlbumName");
+      if(mounted) {
+        setState(() {
+          _currentAlbumArt = newAlbumArt;
+          _currentAlbumName = newAlbumName;
+        });
+        _scrollToCurrentAlbum(animate: true);
+      }
+    }
+  }
+
+  void _scrollToCurrentAlbum({bool animate = true}) {
+    if (_currentAlbumName == null || _cachedAlbumData == null || !_scrollController.hasClients) return;
+    
+    final index = _cachedAlbumData!.indexWhere((album) => album['album'] == _currentAlbumName);
+    if (index != -1) {
+      if (animate) {
+        _scrollController.animateToItem(
+          index,
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        _scrollController.jumpToItem(index);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Listen to the provider to update the background art in real-time
+    final currentlyPlaying = context.watch<TrackPlayerProvider>().currentlyPlayingSong;
+    _updateCurrentAlbum(currentlyPlaying);
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text("Hunter's Matrix"),
         centerTitle: true,
         forceMaterialTransparency: true,
-        foregroundColor: Colors.white,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: _buildAppBarActions(context),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.question_mark),
+            onPressed: () {
+              if (_cachedAlbumData != null) {
+                playRandomAlbum(_cachedAlbumData!);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please wait for albums to load')),
+                );
+              }
+            },
+          ),
+        ],
       ),
       drawer: const MyDrawer(),
       body: Container(
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
           image: DecorationImage(
             image: AssetImage(_currentAlbumArt),
             fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-                Colors.black.withOpacity(0.3), BlendMode.darken),
           ),
         ),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Stack(
-            children: [
-              _buildBody(),
-            ],
+          child: Container(
+            color: Colors.black.withOpacity(0.5),
+            child: _buildBody(),
           ),
         ),
       ),
@@ -145,282 +175,183 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     );
   }
 
-  List<Widget> _buildAppBarActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: const Icon(Icons.question_mark),
-        onPressed: () => _handleRandomAlbumSelection(context),
-      ),
-    ];
-  }
-
-  void _handleRandomAlbumSelection(BuildContext context) {
-    if (_cachedAlbumData != null) {
-      selectRandomAlbum(context, _cachedAlbumData!, _handleDataLoaded);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please wait for albums to load')));
-    }
-  }
-
   Widget _buildBody() {
-    if (_cachedAlbumData == null) {
+    if (_isDataLoading) {
       return const Center(child: CircularProgressIndicator());
-    } else if (_cachedAlbumData!.isEmpty) {
-      return const Center(child: Text("No albums available."));
-    } else {
-      return _buildAlbumWheel();
     }
+    if (_cachedAlbumData == null || _cachedAlbumData!.isEmpty) {
+      return const Center(child: Text("No albums available."));
+    }
+    return _buildAlbumWheel();
   }
 
   Widget _buildAlbumWheel() {
-    return Consumer<AlbumSettingsProvider>(
-      builder: (context, albumSettings, child) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final double wheelHeight = constraints.maxHeight * 0.8;
-            final double itemExtent = wheelHeight / 1.6;
-            Color shadowColor = Colors.redAccent;
+    final albumSettings = context.watch<AlbumSettingsProvider>();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double itemExtent = constraints.maxHeight * 0.5;
 
-            return NotificationListener<ScrollNotification>(
-              onNotification: (ScrollNotification notification) {
-                if (notification is ScrollUpdateNotification) {
-                  if (notification.metrics.pixels % itemExtent < 1) {
-                    HapticFeedback.selectionClick();
-                  }
-                }
-                return true;
-              },
-              child: ListWheelScrollView.useDelegate(
-                controller: _scrollController,
-                itemExtent: itemExtent,
-                diameterRatio: 2.0,
-                perspective: 0.001,
-                squeeze: 1.2,
-                physics: const FixedExtentScrollPhysics(),
-                onSelectedItemChanged: (index) {
-                  HapticFeedback.mediumImpact();
-                  preloadAlbumImagesAroundIndex(index, context);
-                },
-                childDelegate: ListWheelChildBuilderDelegate(
-                  builder: (context, index) {
-                    if (_cachedAlbumData == null || _cachedAlbumData!.isEmpty) {
-                      return null;
-                    }
-
-                    final actualIndex = index % _cachedAlbumData!.length;
-                    final albumData = _cachedAlbumData![actualIndex];
-                    final albumName = albumData['album'] as String;
-                    final albumArt = albumData['albumArt'] as String;
-
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AlbumDetailPage(
-                              tracks: albumData['songs'] as List<Track>,
-                              albumArt: albumArt,
-                              albumName: albumName,
-                            ),
-                          ),
-                        );
-                      },
-                      onLongPress: () {
-                        handleAlbumTap(albumData, _handleDataLoaded, context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AlbumDetailPage(
-                              tracks: albumData['songs'] as List<Track>,
-                              albumArt: albumArt,
-                              albumName: albumName,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: itemExtent * 0.9,
-                        height: itemExtent * 0.9,
-                        margin:
-                            EdgeInsets.symmetric(vertical: itemExtent * 0.05),
-                        child: Card(
-                          elevation: 0,
-                          color: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: _currentAlbumName == albumName
-                                  ? Colors.yellow
-                                  : Colors.transparent,
-                              width: 3,
-                            ),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.asset(
-                                  gaplessPlayback: true,
-                                  albumArt,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              if (index == 104)
-                                const Align(
-                                  alignment: Alignment.bottomRight,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Icon(Icons.album,
-                                        color: Colors.green, size: 30),
-                                  ),
-                                )
-                              else
-                                const Icon(Icons.album,
-                                    color: Colors.transparent, size: 10),
-                              if (albumSettings.displayAlbumReleaseNumber)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 12.0, bottom: 70),
-                                  child: Align(
-                                    alignment: Alignment.bottomLeft,
-                                    child: Text(
-                                      ' ${actualIndex + 1}. ${formatAlbumName(albumName)}',
-                                      style: TextStyle(
-                                          color: _currentAlbumName == albumName
-                                              ? Colors.yellow
-                                              : Colors.white,
-                                          fontWeight:
-                                              _currentAlbumName == albumName
-                                                  ? FontWeight.bold
-                                                  : FontWeight.normal,
-                                          fontSize: 18,
-                                          shadows:
-                                              _currentAlbumName == albumName
-                                                  ? [
-                                                      Shadow(
-                                                        color: shadowColor,
-                                                        blurRadius: 3,
-                                                      ),
-                                                      Shadow(
-                                                        color: shadowColor,
-                                                        blurRadius: 6,
-                                                      ),
-                                                    ]
-                                                  : null),
-                                    ),
-                                  ),
-                                ),
-                              if (albumSettings.displayAlbumReleaseNumber)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 48.0, bottom: 54),
-                                  child: Align(
-                                    alignment: Alignment.bottomLeft,
-                                    child: Text(
-                                      ' ${extractDateFromAlbumName(albumName)}',
-                                      style: TextStyle(
-                                          color: _currentAlbumName == albumName
-                                              ? Colors.yellow
-                                              : Colors.white,
-                                          fontWeight:
-                                              _currentAlbumName == albumName
-                                                  ? FontWeight.bold
-                                                  : FontWeight.normal,
-                                          fontSize: 12,
-                                          shadows:
-                                              _currentAlbumName == albumName
-                                                  ? [
-                                                      Shadow(
-                                                        color: shadowColor,
-                                                        blurRadius: 3,
-                                                      ),
-                                                      Shadow(
-                                                        color: shadowColor,
-                                                        blurRadius: 6,
-                                                      ),
-                                                    ]
-                                                  : null),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  childCount:
-                      _cachedAlbumData == null ? 0 : _cachedAlbumData!.length,
-                ),
-              ),
-            );
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification is ScrollUpdateNotification) {
+              if (notification.metrics.pixels % itemExtent < 1) {
+                HapticFeedback.selectionClick();
+              }
+            }
+            return true;
           },
+          child: ListWheelScrollView.useDelegate(
+            controller: _scrollController,
+            itemExtent: itemExtent,
+            diameterRatio: 2.0,
+            perspective: 0.002,
+            physics: const FixedExtentScrollPhysics(),
+            onSelectedItemChanged: (index) => HapticFeedback.mediumImpact(),
+            childDelegate: ListWheelChildBuilderDelegate(
+              childCount: _cachedAlbumData!.length,
+              builder: (context, index) {
+                final albumData = _cachedAlbumData![index];
+                final tracks = albumData['songs'] as List<Track>;
+
+                return GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AlbumDetailPage(
+                        tracks: tracks,
+                        albumArt: albumData['albumArt'] as String,
+                        albumName: albumData['album'] as String,
+                      ),
+                    ),
+                  ),
+                  onLongPress: () {
+                    playAlbumFromTracks(tracks);
+                  },
+                  child: _buildWheelItem(albumData, albumSettings, itemExtent),
+                );
+              },
+            ),
+          ),
         );
       },
     );
   }
 
-  void preloadAlbumImagesAroundIndex(int currentIndex, BuildContext context) {
-    const int preloadRange = 24; // Adjust as needed
-    for (int i = currentIndex - preloadRange;
-        i <= currentIndex + preloadRange;
-        i++) {
-      if (i >= 0 && i < _cachedAlbumData!.length) {
-        final String albumArt = _cachedAlbumData![i]['albumArt'] as String;
-        precacheImage(AssetImage(albumArt), context);
-      }
-    }
+  Widget _buildWheelItem(Map<String, dynamic> albumData, AlbumSettingsProvider settings, double itemExtent) {
+    final albumName = albumData['album'] as String;
+    final albumArt = albumData['albumArt'] as String;
+    final index = _cachedAlbumData!.indexOf(albumData);
+    final isSelected = _currentAlbumName == albumName;
+
+    return Container(
+      width: itemExtent * 0.9,
+      height: itemExtent * 0.9,
+      margin: EdgeInsets.symmetric(vertical: itemExtent * 0.05),
+      child: Card(
+        elevation: isSelected ? 8 : 2,
+        color: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isSelected ? Colors.yellow : Colors.white24,
+            width: isSelected ? 3 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(albumArt, fit: BoxFit.cover, gaplessPlayback: true),
+            if (index == 104) // Offline album indicator
+              const Positioned(
+                bottom: 8,
+                right: 8,
+                child: Icon(Icons.album, color: Colors.green, size: 24),
+              ),
+            if (settings.displayAlbumReleaseNumber)
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [Colors.black, Colors.transparent],
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${index + 1}. ${formatAlbumName(albumName)}',
+                        style: TextStyle(
+                          color: isSelected ? Colors.yellow : Colors.white,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 18,
+                          shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                        ),
+                      ),
+                      Text(
+                        extractDateFromAlbumName(albumName),
+                         style: TextStyle(
+                          color: isSelected ? Colors.yellow.withOpacity(0.8) : Colors.white70,
+                          fontSize: 12,
+                          shadows: const [Shadow(color: Colors.black, blurRadius: 2)],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
-  void scrollToIndex(int index) {
-    if (_cachedAlbumData != null && index < _cachedAlbumData!.length) {
-      final double itemExtent =
-          _scrollController.position.viewportDimension / 2;
-
-      if (_scrollController.offset.toInt() != (index * itemExtent).toInt()) {
-        _scrollController.animateTo(
-          index * itemExtent,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      } else {
-        Navigator.pushNamed(context, '/music_player_page');
-      }
-    }
-  }
-
+  /// **MODIFIED FAB**
+  /// This FAB now shows a loading indicator when the player is buffering.
   Widget? _buildFloatingActionButton() {
-    return _currentAlbumName == null || _currentAlbumName!.isEmpty
-        ? null
-        : FloatingActionButton(
-            onPressed: () {
-              final index = _cachedAlbumData!.indexWhere((releaseNumber) =>
-                  releaseNumber['album'] == _currentAlbumName);
+    final playerProvider = context.watch<TrackPlayerProvider>();
 
-              scrollToIndex(index);
+    // Case 1: Player is actively loading or buffering a track.
+    if (playerProvider.isLoading) {
+      return FloatingActionButton(
+        onPressed: null, // Disable press action while loading
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: const SizedBox(
+          width: 50,
+          height: 50,
+          child: CircularProgressIndicator(
+            strokeWidth: 3.0,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
+          ),
+        ),
+      );
+    }
 
-              // Navigator.pushNamed(context, '/music_player_page');
-            },
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            child: const Icon(
-              Icons.play_circle,
-              color: Colors.yellow,
-              shadows: [
-                Shadow(
-                  color: Colors.redAccent,
-                  blurRadius: 3,
-                ),
-                Shadow(
-                  color: Colors.redAccent,
-                  blurRadius: 6,
-                ),
-              ],
-              size: 50,
-            ),
-          );
+    // Case 2: A song is loaded and ready (or playing/paused), but not loading.
+    if (playerProvider.currentTrack != null) {
+      return FloatingActionButton(
+        onPressed: () {
+          _scrollToCurrentAlbum(animate: true);
+          Navigator.pushNamed(context, '/music_player_page');
+        },
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: const Icon(
+          Icons.play_circle,
+          color: Colors.yellow,
+          shadows: [Shadow(color: Colors.redAccent, blurRadius: 4)],
+          size: 50,
+        ),
+      );
+    }
+    
+    // Case 3: No song is loaded and the player is not loading.
+    return null;
   }
 }

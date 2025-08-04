@@ -9,6 +9,7 @@
     pkgs.jdk17
     pkgs.unzip
     pkgs.tzdata
+    pkgs.gradle
   ];
    # Sets environment variables in the workspace
   env = {

@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:huntrix/components/my_drawer.dart';
@@ -13,6 +12,7 @@ import 'package:huntrix/utils/album_utils.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:huntrix/providers/album_settings_provider.dart';
 import 'package:huntrix/helpers/archive_alive_helper.dart';
+import 'package:logger/logger.dart';
 
 class AlbumsPage extends StatefulWidget {
   const AlbumsPage({super.key});
@@ -23,13 +23,25 @@ class AlbumsPage extends StatefulWidget {
 
 class _AlbumsPageState extends State<AlbumsPage>
     with AutomaticKeepAliveClientMixin {
+  // Logger instance
+  static final Logger _logger = Logger(
+    printer: PrettyPrinter(methodCount: 1),
+  );
+
+  // Constants
+  static const int _offlineAlbumIndex = 104;
+  static const String _defaultAlbumArt = 'assets/images/t_steal.webp';
+  static const Duration _scrollDuration = Duration(milliseconds: 500);
+  static const int _connectionRetryCount = 1;
+
+  // State variables
   List<Map<String, dynamic>>? _cachedAlbumData;
-  String _currentAlbumArt = 'assets/images/t_steal.webp';
+  String _currentAlbumArt = _defaultAlbumArt;
   String? _currentAlbumName;
   bool _isPageOffline = false;
-  final GlobalKey _listKey = GlobalKey();
   Color _backdropColor = Colors.black.withOpacity(0.5);
 
+  // Controllers
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
@@ -40,108 +52,115 @@ class _AlbumsPageState extends State<AlbumsPage>
   @override
   void initState() {
     super.initState();
-    _loadData();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkConnection();
-    });
+    _initializeData();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final trackPlayerProvider = context.watch<TrackPlayerProvider>();
+    _updateCurrentAlbumFromProvider(trackPlayerProvider);
+  }
+
+  Future<void> _initializeData() async {
+    await _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkConnection();
+    });
+  }
+
+  void _updateCurrentAlbumFromProvider(TrackPlayerProvider trackPlayerProvider) {
     final currentlyPlayingSong = trackPlayerProvider.currentlyPlayingSong;
 
-    if (currentlyPlayingSong != null &&
-        currentlyPlayingSong.albumArt != _currentAlbumArt) {
+    if (currentlyPlayingSong == null && _currentAlbumName != null) {
       setState(() {
-        _currentAlbumArt = currentlyPlayingSong.albumArt!;
-        _currentAlbumName = currentlyPlayingSong.albumName;
-
-        if (!_currentAlbumName!.startsWith('19')) {
-          _currentAlbumName = '19$_currentAlbumName';
-        }
+        _currentAlbumName = null;
+        _currentAlbumArt = _defaultAlbumArt;
       });
+      return;
+    }
+
+    if (currentlyPlayingSong != null) {
+      final newAlbumArt = currentlyPlayingSong.albumArt ?? _defaultAlbumArt;
+      final newAlbumName = currentlyPlayingSong.albumName;
+
+      if (newAlbumArt != _currentAlbumArt || newAlbumName != _currentAlbumName) {
+        _logger.d('Player changed album. Updating UI for: $newAlbumName');
+        setState(() {
+          _currentAlbumArt = newAlbumArt;
+          _currentAlbumName = newAlbumName;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _scrollToCurrentAlbum();
+        });
+      }
     }
   }
 
   Future<void> _loadData() async {
-    await loadData(context, (albumData) {
-      if (albumData != null) {
-        preloadAlbumImages(albumData, context);
-      }
-      if (mounted) {
-        setState(() {
-          _cachedAlbumData = albumData;
-        });
-      }
-    });
+    try {
+      _logger.i('Loading album data...');
+      await loadData(context, (albumData) {
+        if (mounted) {
+          setState(() {
+            _cachedAlbumData = albumData;
+          });
+          if (albumData != null) {
+            preloadAlbumImages(albumData, context);
+          }
+        }
+      });
+    } catch (e, stackTrace) {
+      _logger.e('Failed to load album data', error: e, stackTrace: stackTrace);
+      _showErrorSnackBar('Failed to load album data.');
+    }
   }
 
   Future<void> _checkConnection() async {
-    const retryCount = 1;
-    final result = await checkConnectionWithRetries(
-      retryCount: retryCount,
-      onPageOffline: (isOffline) {
-        setState(() {
-          _isPageOffline = isOffline;
-        });
-      },
-    );
-
-    String dialogMessage;
-    switch (result) {
-      case 'Connection Successful':
-        return;
-      case 'Temporarily Offline.\nonly release 105 is available.':
-        dialogMessage =
-            'The archive.org page is temporarily offline.\nonly release 105 is available.';
-        break;
-      case 'No Internet Connection':
-        dialogMessage =
-            'No internet connection.\nonly release 105 is available.';
-        break;
-      default:
-        dialogMessage =
-            'Failed to connect to archive.org.\nonly release 105 is available.';
-        break;
+    try {
+      final result = await checkConnectionWithRetries(
+        retryCount: _connectionRetryCount,
+        onPageOffline: (isOffline) {
+          if (mounted) setState(() => _isPageOffline = isOffline);
+        },
+      );
+      if (result != 'Connection Successful' && mounted) {
+        _showSiteUnavailableDialog(
+          '${_getConnectionErrorMessage(result)}\n\nRetry attempts: $_connectionRetryCount',
+        );
+      }
+    } catch (e, stackTrace) {
+      _logger.e('Connection check failed', error: e, stackTrace: stackTrace);
+      if (mounted) _showErrorSnackBar('Connection check failed.');
     }
+  }
 
-    final fullMessage = '$dialogMessage\n\nRetry attempts: $retryCount';
-    _showSiteUnavailableDialog(fullMessage);
+  String _getConnectionErrorMessage(String result) {
+    // ... (same as before)
+    switch (result) {
+      case 'Temporarily Offline.\nonly release 105 is available.':
+        return 'The archive.org page is temporarily offline.\nOnly release 105 is available.';
+      case 'No Internet Connection':
+        return 'No internet connection.\nOnly release 105 is available.';
+      default:
+        return 'Failed to connect to archive.org.\nOnly release 105 is available.';
+    }
   }
 
   void _showSiteUnavailableDialog(String message) {
-    final navigator = Navigator.of(context);
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final albumSettingsProvider = context.read<AlbumSettingsProvider>();
-
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text(
-            'Connection Issue!',
-            style: TextStyle(color: Colors.red, fontSize: 16),
-          ),
-          backgroundColor: Colors.black.withOpacity(0.5),
-          content: Text(
-            message,
-            style: const TextStyle(color: Colors.red, fontSize: 16),
-          ),
-          actions: <Widget>[
+          title: const Text('Connection Issue', style: TextStyle(color: Colors.red)),
+          backgroundColor: Colors.black.withOpacity(0.8),
+          content: Text(message, style: const TextStyle(color: Colors.white70)),
+          actions: [
             TextButton(
-              child: const Text(
-                'OK',
-                style: TextStyle(color: Colors.red, fontSize: 16),
-              ),
+              child: const Text('OK', style: TextStyle(color: Colors.red)),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                _handleConnectionError(
-                  navigator: navigator,
-                  scaffoldMessenger: scaffoldMessenger,
-                  albumSettingsProvider: albumSettingsProvider,
-                );
+                _handleConnectionError();
               },
             ),
           ],
@@ -150,28 +169,23 @@ class _AlbumsPageState extends State<AlbumsPage>
     );
   }
 
-  Future<void> _handleConnectionError({
-    required NavigatorState navigator,
-    required ScaffoldMessengerState scaffoldMessenger,
-    required AlbumSettingsProvider albumSettingsProvider,
-  }) async {
-    try {
-      _changeBackdropColor(Colors.red.withOpacity(0.5));
-      _scrollToIndex(104);
-      albumSettingsProvider.setDisplayAlbumReleaseNumber(true);
-      _setCurrentAlbumByIndex(104);
+  Future<void> _handleConnectionError() async {
+    if (_cachedAlbumData == null || _offlineAlbumIndex >= _cachedAlbumData!.length) {
+      _showErrorSnackBar('Offline album data is not available.');
+      return;
+    }
+    setState(() => _backdropColor = Colors.red.withOpacity(0.5));
+    context.read<AlbumSettingsProvider>().setDisplayAlbumReleaseNumber(true);
+    final offlineAlbum = _cachedAlbumData![_offlineAlbumIndex];
+    final albumTracks = offlineAlbum['songs'] as List<Track>;
+    await playAlbumFromTracks(albumTracks);
+  }
 
-      if (_cachedAlbumData != null && _cachedAlbumData!.length > 104) {
-        final localAlbum = _cachedAlbumData![104];
-        final albumTracks = localAlbum['songs'] as List<Track>;
-        await handleAlbumTap2(albumTracks);
-      } else {
-        throw Exception('Cached album data not available');
-      }
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'),
+          content: Text(message),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -179,133 +193,84 @@ class _AlbumsPageState extends State<AlbumsPage>
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final size = MediaQuery.of(context).size;
-
-    if (size.width > 600) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const AlbumsGridPage()),
-      );
+    if (MediaQuery.of(context).size.width > 600) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AlbumsGridPage()),
+        );
+      });
+      return const SizedBox.shrink();
     }
-
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        foregroundColor: Colors.white,
-        backgroundColor: Colors.black,
-        title: const Text("Select a random trix -->"),
-        actions: _buildAppBarActions(),
-      ),
+      appBar: _buildAppBar(),
       drawer: const MyDrawer(),
       body: _buildBody(),
-      floatingActionButton:
-          _cachedAlbumData != null ? _buildFloatingActionButton() : null,
+      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
-  List<Widget> _buildAppBarActions() {
-    return [
-      IconButton(
-        disabledColor: Colors.transparent,
-        color: Colors.white,
-        icon: const Icon(Icons.question_mark, color: Colors.white),
-        onPressed: () => _handleRandomAlbumSelection(context),
-      ),
-    ];
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      centerTitle: true,
+      backgroundColor: Colors.black,
+      title: const Text("Select a random trix -->"),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.question_mark),
+          onPressed: () {
+            if (_cachedAlbumData == null || _cachedAlbumData!.isEmpty) {
+              _showErrorSnackBar('Please wait for albums to load.');
+              return;
+            }
+            if (_isPageOffline) {
+              _showErrorSnackBar('archive.org offline, only release 105 is available.');
+              return;
+            }
+            playRandomAlbum(_cachedAlbumData!);
+          },
+          tooltip: 'Random Album',
+        ),
+      ],
+    );
   }
 
   void _scrollToCurrentAlbum() {
     if (_currentAlbumName != null && _cachedAlbumData != null) {
-      final index = _cachedAlbumData!
-          .indexWhere((album) => album['album'] == _currentAlbumName);
-      if (index != -1) {
-        _scrollToIndex(index);
+      final index = _cachedAlbumData!.indexWhere((album) => album['album'] == _currentAlbumName);
+      if (index != -1 && _itemScrollController.isAttached) {
+        _itemScrollController.scrollTo(
+          index: index,
+          duration: _scrollDuration,
+          curve: Curves.easeInOut,
+          alignment: 0.5,
+        );
       }
-    }
-  }
-
-  void _scrollToIndex(int index) {
-    if (_itemScrollController.isAttached) {
-      _itemScrollController.scrollTo(
-        index: index,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-        alignment: 0.5,
-      );
-    }
-  }
-
-  Future<void> _handleRandomAlbumSelection(BuildContext context) async {
-    if (_cachedAlbumData != null && _cachedAlbumData!.isNotEmpty) {
-      final randomIndex = Random().nextInt(_cachedAlbumData!.length);
-      final randomAlbum = _cachedAlbumData![randomIndex];
-      final albumArt = randomAlbum['albumArt'] as String;
-
-      if (randomIndex >= 0 && randomIndex < (_cachedAlbumData?.length ?? 0)) {
-        //todo: check if local
-        if (_isPageOffline && randomIndex != 104) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'archive.org offline, only release 105 is available.',
-                  style: TextStyle(color: Colors.red)),
-            ),
-          );
-          return;
-        }
-
-        await _preloadAlbumArt(randomIndex);
-        final albumTracks = randomAlbum['songs'] as List<Track>;
-        await handleAlbumTap2(albumTracks);
-      }
-
-      setState(() {
-        _currentAlbumArt = albumArt;
-        _currentAlbumName = randomAlbum['album'] as String;
-      });
-      _scrollToCurrentAlbum();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please wait for albums to load')),
-      );
-    }
-  }
-
-  void _changeBackdropColor(Color newColor) {
-    setState(() {
-      _backdropColor = newColor;
-    });
-  }
-
-  void _setCurrentAlbumByIndex(int index) {
-    if (_cachedAlbumData != null &&
-        index >= 0 &&
-        index < _cachedAlbumData!.length) {
-      setState(() {
-        _currentAlbumArt = _cachedAlbumData![index]['albumArt'] as String;
-        _currentAlbumName = _cachedAlbumData![index]['album'] as String;
-      });
-      _scrollToIndex(index);
     }
   }
 
   Widget _buildBody() {
+    final Color effectiveBackdropColor = _currentAlbumName == null
+        ? Colors.black.withOpacity(0.7)
+        : _backdropColor;
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
           image: AssetImage(_currentAlbumArt),
           fit: BoxFit.cover,
+          onError: (exception, stackTrace) {
+            _logger.e('Error loading background image.', error: exception);
+            setState(() => _currentAlbumArt = _defaultAlbumArt);
+          },
         ),
       ),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          color: _backdropColor,
+          color: effectiveBackdropColor,
           child: _buildAlbumContent(),
         ),
       ),
@@ -315,163 +280,130 @@ class _AlbumsPageState extends State<AlbumsPage>
   Widget _buildAlbumContent() {
     if (_cachedAlbumData == null) {
       return const Center(child: CircularProgressIndicator());
-    } else if (_cachedAlbumData!.isEmpty) {
-      return const Center(child: Text("No albums available."));
-    } else {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_currentAlbumName != null && _cachedAlbumData != null) {
-              final index = _cachedAlbumData!
-                  .indexWhere((album) => album['album'] == _currentAlbumName);
-              if (index != -1) {
-                _scrollToIndex(index);
-              }
-            }
-          });
-          return _buildAlbumListView(_cachedAlbumData);
-        },
-      );
     }
-  }
-
-  Widget _buildAlbumListView(List<Map<String, dynamic>>? albumData) {
+    if (_cachedAlbumData!.isEmpty) {
+      return const Center(child: Text("No albums available.", style: TextStyle(color: Colors.white)));
+    }
     return Consumer<AlbumSettingsProvider>(
       builder: (context, albumSettings, child) {
         return ScrollablePositionedList.builder(
-          key: _listKey,
           itemScrollController: _itemScrollController,
           itemPositionsListener: _itemPositionsListener,
-          itemCount: albumData?.length ?? 0,
-          itemBuilder: (context, index) {
-            final album = albumData![index];
-            final albumName = album['album'] as String;
-            final albumArt = album['albumArt'] as String;
-
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AlbumDetailPage(
-                      tracks: album['songs'] as List<Track>,
-                      albumArt: albumArt,
-                      albumName: albumName,
-                    ),
-                  ),
-                );
-              },
-              onLongPress: () async {
-                await _handleAlbumTap(album, index);
-              },
-              child: _buildAlbumCard(albumName, albumArt, index, albumSettings),
-            );
-          },
+          itemCount: _cachedAlbumData!.length,
+          itemBuilder: (context, index) => _buildAlbumListItem(index, albumSettings),
         );
       },
     );
   }
 
-  Widget _buildAlbumCard(String albumName, String albumArt, int index,
-      AlbumSettingsProvider albumSettings) {
-    Color shadowColor = Colors.redAccent;
+  Widget _buildAlbumListItem(int index, AlbumSettingsProvider albumSettings) {
+    final album = _cachedAlbumData![index];
+    final albumTracks = album['songs'] as List<Track>;
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AlbumDetailPage(
+            tracks: albumTracks,
+            albumArt: album['albumArt'] as String,
+            albumName: album['album'] as String,
+          ),
+        ),
+      ),
+      onLongPress: () {
+        if (_isPageOffline && index != _offlineAlbumIndex) {
+          _showErrorSnackBar('archive.org offline, only release 105 is available.');
+          return;
+        }
+        playAlbumFromTracks(albumTracks);
+      },
+      child: _buildAlbumCard(album, albumSettings),
+    );
+  }
 
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.94,
-      child: Card(
-        elevation: 0,
-        color: Colors.transparent,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            ClipRRect(
-              child: Stack(
-                children: [
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.28,
-                      maxHeight: MediaQuery.of(context).size.width * 0.28,
-                    ),
-                    child: Card(
-                      borderOnForeground: true,
-                      elevation: 0,
-                      color: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(2.0),
-                        side: BorderSide(
-                          color: _currentAlbumName == albumName
-                              ? Colors.yellow
-                              : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      clipBehavior: Clip.hardEdge,
-                      child: Image.asset(
-                        albumArt,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  if (index == 104)
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(90, 90, 0, 0),
-                      child: Icon(Icons.album, color: Colors.green, size: 15),
-                    )
-                  else
-                    const Icon(Icons.album,
-                        color: Colors.transparent, size: 10),
-                ],
+  Widget _buildAlbumCard(Map<String, dynamic> album, AlbumSettingsProvider albumSettings) {
+    // ... (same as before)
+    final albumName = album['album'] as String;
+    final albumArt = album['albumArt'] as String;
+    final index = _cachedAlbumData!.indexOf(album);
+
+    final isCurrentAlbum = _currentAlbumName == albumName;
+    final shadowColor = Colors.redAccent;
+
+    return Card(
+      elevation: 0,
+      color: Colors.transparent,
+      child: Row(
+        children: [
+          _buildAlbumArt(albumArt, index, isCurrentAlbum),
+          _buildAlbumInfo(albumName, index, albumSettings, isCurrentAlbum, shadowColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlbumArt(String albumArt, int index, bool isCurrentAlbum) {
+    // ... (same as before)
+    final screenWidth = MediaQuery.of(context).size.width;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4.0),
+      child: Stack(
+        children: [
+          Container(
+            width: screenWidth * 0.28,
+            height: screenWidth * 0.28,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4.0),
+              border: Border.all(
+                color: isCurrentAlbum ? Colors.yellow : Colors.white24,
+                width: isCurrentAlbum ? 2.0 : 1.0,
+              ),
+              image: DecorationImage(
+                image: AssetImage(albumArt),
+                fit: BoxFit.cover,
               ),
             ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                    child: Text(
-                      albumSettings.displayAlbumReleaseNumber
-                          ? '${index + 1}. ${formatAlbumName(albumName)}'
-                          : formatAlbumName(albumName),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: _currentAlbumName == albumName
-                            ? Colors.yellow
-                            : Colors.white,
-                        shadows: _currentAlbumName == albumName
-                            ? [
-                                Shadow(color: shadowColor, blurRadius: 3),
-                                Shadow(color: shadowColor, blurRadius: 6),
-                              ]
-                            : null,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(40, 5, 10, 10),
-                    child: Text(
-                      extractDateFromAlbumName(albumName),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: _currentAlbumName == albumName
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: _currentAlbumName == albumName
-                            ? Colors.yellow
-                            : Colors.white,
-                        shadows: _currentAlbumName == albumName
-                            ? [
-                                Shadow(color: shadowColor, blurRadius: 3),
-                                Shadow(color: shadowColor, blurRadius: 6),
-                              ]
-                            : null,
-                      ),
-                    ),
-                  ),
-                ],
+          ),
+          if (index == _offlineAlbumIndex)
+            Positioned(
+              bottom: 4,
+              right: 4,
+              child: Icon(Icons.album, color: Colors.green.shade400, size: 16),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlbumInfo(String albumName, int index, AlbumSettingsProvider albumSettings, bool isCurrentAlbum, Color shadowColor) {
+    // ... (same as before)
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              albumSettings.displayAlbumReleaseNumber
+                  ? '${index + 1}. ${formatAlbumName(albumName)}'
+                  : formatAlbumName(albumName),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: isCurrentAlbum ? Colors.yellow : Colors.white,
+                shadows: isCurrentAlbum
+                    ? [Shadow(color: shadowColor, blurRadius: 4)] : null,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              extractDateFromAlbumName(albumName),
+              style: TextStyle(
+                fontSize: 12,
+                color: isCurrentAlbum ? Colors.yellow.withOpacity(0.8) : Colors.white70,
               ),
             ),
           ],
@@ -480,55 +412,42 @@ class _AlbumsPageState extends State<AlbumsPage>
     );
   }
 
-  Future<void> _handleAlbumTap(Map<String, dynamic> album, int index) async {
-    final albumTracks = album['songs'] as List<Track>;
+  Widget? _buildFloatingActionButton() {
+    final playerProvider = context.watch<TrackPlayerProvider>();
 
-    if (_isPageOffline && index != 104) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('archive.org offline, only release 105 is available.',
-              style: TextStyle(color: Colors.red)),
+    if (playerProvider.isLoading) {
+      return FloatingActionButton(
+        onPressed: null,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: const SizedBox(
+          width: 50,
+          height: 50,
+          child: CircularProgressIndicator(
+            strokeWidth: 3.0,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
+          ),
         ),
       );
-      return;
     }
 
-    await handleAlbumTap2(albumTracks);
+    if (playerProvider.currentlyPlayingSong != null) {
+      return FloatingActionButton(
+        onPressed: () {
+          _scrollToCurrentAlbum();
+          Navigator.pushNamed(context, '/music_player_page');
+        },
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: const Icon(
+          Icons.play_circle_fill,
+          color: Colors.yellow,
+          shadows: [Shadow(color: Colors.redAccent, blurRadius: 4)],
+          size: 50,
+        ),
+      );
+    }
 
-    setState(() {
-      _currentAlbumArt = album['albumArt'] as String;
-      _currentAlbumName = album['album'] as String;
-    });
-    _scrollToIndex(index);
-  }
-
-  Future<void> _preloadAlbumArt(int index) async {
-    if (_cachedAlbumData == null || !mounted) return;
-    final String albumArt = _cachedAlbumData![index]['albumArt'] as String;
-    precacheImage(AssetImage(albumArt), context);
-  }
-
-  Widget? _buildFloatingActionButton() {
-    if (_currentAlbumName == null || _currentAlbumName!.isEmpty) return null;
-
-    return FloatingActionButton(
-      onPressed: () {
-        final index = _cachedAlbumData!
-            .indexWhere((album) => album['album'] == _currentAlbumName);
-        _scrollToIndex(index);
-        Navigator.pushNamed(context, '/music_player_page');
-      },
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: const Icon(
-        Icons.play_circle,
-        color: Colors.yellow,
-        shadows: [
-          Shadow(color: Colors.redAccent, blurRadius: 3),
-          Shadow(color: Colors.redAccent, blurRadius: 6),
-        ],
-        size: 50,
-      ),
-    );
+    return null;
   }
 }
