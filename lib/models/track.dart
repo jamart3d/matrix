@@ -4,7 +4,7 @@ class Track {
   final String trackArtistName;
   final int trackDuration;
   final String trackName;
-  String trackNumber; // Changed back to mutable for compatibility
+  String trackNumber;
   final String url;
   String? albumArt;
   final int? albumReleaseNumber;
@@ -28,7 +28,8 @@ class Track {
     return '$trackName - $trackArtistName';
   }
 
-  /// Create Track from JSON with null safety and type validation
+  /// **UNCHANGED CONSTRUCTOR**
+  /// This is used by the old `data.json` for the AlbumsPage.
   factory Track.fromJson(Map<String, dynamic> json) {
     return Track(
       albumName: json['albumName'] as String? ?? '',
@@ -44,7 +45,33 @@ class Track {
     );
   }
 
-  /// Convert Track to JSON
+  /// **UPDATED CONSTRUCTOR FOR SHOWS PAGE**
+  /// Creates a Track from the new compact `data_opt.json` format.
+  /// Requires albumName and artistName to be passed in from the parent Show object.
+  /// Now uses index-based track numbering instead of JSON 'n' field.
+  factory Track.fromJsonCompact(
+    Map<String, dynamic> json, {
+    required String albumName,
+    required String artistName,
+    required int trackIndex, // NEW: Track index for proper numbering
+  }) {
+    return Track(
+      albumName: albumName,
+      artistName: artistName,
+      trackArtistName: artistName, // In the new format, track artist is the same as the show artist.
+      trackDuration: _parseIntSafely(json['d']) ?? 0,
+      trackName: json['t'] as String? ?? 'Unknown Track',
+      trackNumber: (trackIndex + 1).toString(), // Use 1-based index instead of JSON 'n'
+      url: json['u'] as String? ?? '',
+      // Artwork is not present in this format, so it will be null, as requested.
+      albumArt: null,
+      albumReleaseNumber: null,
+      albumReleaseDate: null,
+    );
+  }
+
+  // --- The rest of the file remains the same ---
+
   Map<String, dynamic> toJson() {
     return {
       'albumName': albumName,
@@ -59,8 +86,7 @@ class Track {
       'albumReleaseDate': albumReleaseDate,
     };
   }
-
-  /// Create a copy of Track with updated values
+  
   Track copyWith({
     String? albumName,
     String? artistName,
@@ -87,48 +113,22 @@ class Track {
     );
   }
 
-  /// Safely parse integer from dynamic value
   static int? _parseIntSafely(dynamic value) {
     if (value == null) return null;
     if (value is int) return value;
-    if (value is String) {
-      return int.tryParse(value);
-    }
+    if (value is String) return int.tryParse(value);
     if (value is double) return value.round();
     return null;
   }
 
-  /// Get formatted duration as MM:SS
   String get formattedDuration {
     final minutes = trackDuration ~/ 60;
     final seconds = trackDuration % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
-  /// Get formatted duration as human readable string
-  String get humanReadableDuration {
-    final minutes = trackDuration ~/ 60;
-    final seconds = trackDuration % 60;
-    
-    if (minutes == 0) {
-      return '$seconds second${seconds != 1 ? 's' : ''}';
-    } else if (seconds == 0) {
-      return '$minutes minute${minutes != 1 ? 's' : ''}';
-    } else {
-      return '$minutes minute${minutes != 1 ? 's' : ''} and $seconds second${seconds != 1 ? 's' : ''}';
-    }
-  }
-
-  /// Check if track has valid audio URL
   bool get hasValidUrl => url.isNotEmpty && Uri.tryParse(url) != null;
 
-  /// Check if track has album art
-  bool get hasAlbumArt => albumArt != null && albumArt!.isNotEmpty;
-
-  /// Get display name (combines track name and artist)
-  String get displayName => '$trackName - $trackArtistName';
-
-  /// Get track number as integer (useful for sorting)
   int get trackNumberAsInt => int.tryParse(trackNumber) ?? 0;
 
   @override
@@ -144,28 +144,5 @@ class Track {
   @override
   int get hashCode {
     return Object.hash(albumName, trackName, trackArtistName, url);
-  }
-
-  /// Validate that the track has all required fields
-  bool get isValid {
-    return albumName.isNotEmpty &&
-        trackArtistName.isNotEmpty &&
-        trackName.isNotEmpty &&
-        url.isNotEmpty &&
-        trackDuration > 0;
-  }
-
-  /// Get a summary of track validation issues
-  List<String> get validationErrors {
-    final errors = <String>[];
-    
-    if (albumName.isEmpty) errors.add('Album name is required');
-    if (trackArtistName.isEmpty) errors.add('Track artist name is required');
-    if (trackName.isEmpty) errors.add('Track name is required');
-    if (url.isEmpty) errors.add('URL is required');
-    if (trackDuration <= 0) errors.add('Track duration must be positive');
-    if (!hasValidUrl) errors.add('URL format is invalid');
-    
-    return errors;
   }
 }

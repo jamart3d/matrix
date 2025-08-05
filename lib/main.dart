@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:huntrix/pages/albums_list_wheel_page.dart';
 import 'package:huntrix/pages/albums_page.dart';
 import 'package:huntrix/pages/music_player_page.dart';
+import 'package:huntrix/pages/settings_page.dart';
+import 'package:huntrix/pages/shows_page.dart';
 import 'package:huntrix/pages/track_playlist_page.dart';
 import 'package:huntrix/providers/track_player_provider.dart';
 import 'package:huntrix/pages/albums_grid_page.dart';
@@ -11,27 +13,39 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:logger/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:huntrix/pages/shows_music_player_page.dart'; 
+
 
 // Import the encapsulated NavigationService
-import 'services/navigation_service.dart'; // Make sure this path is correct
+import 'services/navigation_service.dart';
 
 Future<void> main() async {
   // 1. Ensure Flutter binding is initialized.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Set a reasonable image cache size.
-  // This is a good practice for apps with many images.
+  // --- START: MODIFIED STARTUP LOGIC ---
+  
+  // 2. Load SharedPreferences to read the setting before the app starts.
+  final prefs = await SharedPreferences.getInstance();
+  // Read the 'skipShowsPage' setting, defaulting to 'false' if it doesn't exist.
+  final bool skipShowsPage = prefs.getBool('skipShowsPage') ?? false;
+
+  // 3. Determine the initial route based on the setting.
+  final String initialRoute = skipShowsPage ? Routes.albumsPage : Routes.showsPage;
+
+  // --- END: MODIFIED STARTUP LOGIC ---
+
+  // 4. Set a reasonable image cache size.
   PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 150; // 150 MB
   PaintingBinding.instance.imageCache.maximumSize = 1000;
 
-  // 3. Perform asynchronous initializations.
-  // Use logging in debug mode to monitor startup time without impacting release performance.
+  // 5. Perform asynchronous initializations.
   if (kDebugMode) {
     final logger = Logger();
     final stopwatch = Stopwatch()..start();
     logger.i('Starting parallel initializations...');
     
-    // Run independent tasks in parallel to speed up app launch.
     await Future.wait([
       _initializeAudioBackground(),
       _configureAudioSession(),
@@ -40,15 +54,14 @@ Future<void> main() async {
     stopwatch.stop();
     logger.i('Finished all initializations in ${stopwatch.elapsedMilliseconds} ms');
   } else {
-    // In release mode, just run the initializations.
     await Future.wait([
       _initializeAudioBackground(),
       _configureAudioSession(),
     ]);
   }
   
-  // 4. Run the app.
-  runApp(const HunTrix());
+  // 6. Run the app, passing in the determined initialRoute.
+  runApp(HunTrix(initialRoute: initialRoute));
 }
 
 /// Initializes just_audio_background for background audio controls.
@@ -69,7 +82,9 @@ Future<void> _configureAudioSession() async {
 }
 
 class HunTrix extends StatelessWidget {
-  const HunTrix({super.key});
+  // Accept the initialRoute as a constructor parameter.
+  final String initialRoute;
+  const HunTrix({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -79,13 +94,12 @@ class HunTrix extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => AlbumSettingsProvider()),
       ],
       child: MaterialApp(
-        // Use the navigatorKey from the singleton NavigationService instance.
-        // This is the crucial step to link the service to the app's navigator.
         navigatorKey: NavigationService().navigatorKey, 
         debugShowCheckedModeBanner: false,
         title: 'HunTrix',
         theme: _buildTheme(),
-        initialRoute: Routes.albumsPage,
+        // Use the initialRoute that was determined in main() and passed here.
+        initialRoute: initialRoute,
         routes: _buildRoutes(),
       ),
     );
@@ -108,22 +122,28 @@ ThemeData _buildTheme() {
   );
 }
 
-/// A private top-level function to define the app's routes.
+/// A private top-level function to define all the app's routes.
 Map<String, WidgetBuilder> _buildRoutes() {
   return {
+    Routes.showsPage: (context) => const ShowsPage(),
     Routes.albumsPage: (context) => const AlbumsPage(),
     Routes.musicPlayerPage: (context) => const MusicPlayerPage(),
+    Routes.showsMusicPlayerPage: (context) => const ShowsMusicPlayerPage(),
     Routes.trackPlaylistPage: (context) => const TrackPlaylistPage(),
     Routes.albumsListWheelPage: (context) => const AlbumListWheelPage(),
     Routes.albumsGridPage: (context) => const AlbumsGridPage(),
+    Routes.settingsPage: (context) => const SettingsPage(),
   };
 }
 
 /// Route constants for clean and maintainable navigation.
 class Routes {
+  static const String showsPage = '/'; // ShowsPage is now the root.
   static const String albumsPage = '/albums_page';
   static const String musicPlayerPage = '/music_player_page';
+  static const String showsMusicPlayerPage = '/shows_music_player_page';
   static const String trackPlaylistPage = '/song_playlist_page';
   static const String albumsListWheelPage = '/albums_list_wheel_page';
   static const String albumsGridPage = '/albums_grid_page';
+  static const String settingsPage = '/settings_page';
 }

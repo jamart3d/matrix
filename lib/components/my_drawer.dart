@@ -1,109 +1,88 @@
 import 'package:flutter/material.dart';
-import 'package:huntrix/pages/settings_page.dart'; // Import your SettingsPage
+// The unused import for 'settings_page.dart' has been removed.
 
-class MyDrawer extends StatefulWidget {
+class MyDrawer extends StatelessWidget {
   const MyDrawer({super.key});
 
   @override
-  State<MyDrawer> createState() => _MyDrawerState();
-}
-
-class _MyDrawerState extends State<MyDrawer> {
-  @override
   Widget build(BuildContext context) {
-    final routeSettings = ModalRoute.of(context)?.settings;
-    final callingPageName = routeSettings?.name;
-    final size = MediaQuery.of(context).size;
-
     return Drawer(
-      backgroundColor: Colors.black.withOpacity(0.5),
       child: Column(
         children: [
+          // Using the custom DrawerHeader with a Stack for the background image
           DrawerHeader(
-            child: Center(
-              child: Image.asset(
-                'assets/images/t_steal.webp', // Replace with your image asset
-                color: Colors.white,
-              ),
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  'assets/images/t_steal.webp', // Your drawer header image
+                  fit: BoxFit.cover,
+                ),
+                Container(
+                  color: Colors.black.withOpacity(0.5),
+                ),
+                const Center(
+                  child: Text(
+                    'HunTrix',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(color: Colors.black, blurRadius: 4),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          // IMPORTANT: Wrap the ListTiles in a FocusScope
-          FocusScope(
-            autofocus: true, // Autofocus this scope
-            child: Column( // Or ListView if you have more items
+          // Drawer Body - Links
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
               children: [
-                _buildDrawerItem(
-                  context,
-                  icon: Icons.settings,
-                  text: "Settings",
-                  onTap: () => _navigateTo(context, const SettingsPage()),
+                ListTile(
+                  leading: const Icon(Icons.music_note),
+                  title: const Text('Shows'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacementNamed(context, '/');
+                  },
                 ),
-                if (callingPageName != '/albums_page' && size.width < 600)
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.album,
-                    text: "Albums List",
-                    onTap: () => _navigateToExistingPage(context, '/albums_page'),
-                  ),
-                if (callingPageName != '/albums_list_wheel_page' && size.width < 600)
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.album_outlined,
-                    text: "Albums Wheel",
-                    onTap: () =>
-                        _navigateToExistingPage(context, '/albums_list_wheel_page'),
-                  ),
-                if (size.width > 600)
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.tv_rounded,
-                    text: "tv view",
-                    onTap: () =>
-                        _navigateToExistingPage(context, '/albums_grid_page'),
-                  ),
-
+                ListTile(
+                  leading: const Icon(Icons.album),
+                  title: const Text('Albums (List)'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacementNamed(context, '/albums_page');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.view_carousel),
+                  title: const Text('Albums (Wheel)'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacementNamed(context, '/albums_list_wheel_page');
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text('Settings'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // This call uses the named route, so no direct import is needed.
+                    Navigator.pushNamed(context, '/settings_page');
+                  },
+                ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-
-  // Utility method to build drawer items
-  Widget _buildDrawerItem(
-      BuildContext context, {
-        required IconData icon,
-        required String text,
-        required VoidCallback onTap,
-      }) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.white),
-      focusColor: Colors.yellow.withOpacity(0.5),
-      title: Text(text, style: const TextStyle(color: Colors.white)),
-      onTap: () {
-        Navigator.pop(context); // Close drawer first
-        onTap(); // Execute the provided onTap action
-      },
-    );
-  }
-
-  // Method to handle navigation with MaterialPageRoute
-  void _navigateTo(BuildContext context, Widget page) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => page),
-    );
-  }
-
-  void _navigateToExistingPage(BuildContext context, String routeName) {
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      routeName,
-          (route) => route.settings.name == routeName
-          ? true
-          : false, // Remove routes until you reach the target route
     );
   }
 }
