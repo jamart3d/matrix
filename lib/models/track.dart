@@ -1,3 +1,5 @@
+// lib/models/track.dart
+
 class Track {
   final String albumName;
   final String? artistName;
@@ -9,6 +11,7 @@ class Track {
   String? albumArt;
   final int? albumReleaseNumber;
   final String? albumReleaseDate;
+  final String? shnid; // Added to identify the source
 
   Track({
     required this.albumName,
@@ -21,6 +24,7 @@ class Track {
     this.albumArt,
     this.albumReleaseNumber,
     this.albumReleaseDate,
+    this.shnid, // Added to constructor
   });
 
   @override
@@ -28,8 +32,8 @@ class Track {
     return '$trackName - $trackArtistName';
   }
 
-  /// **UNCHANGED CONSTRUCTOR**
-  /// This is used by the old `data.json` for the AlbumsPage.
+  /// Constructor for data from 'data.json' (AlbumsPage).
+  /// shnid will be null here, which is correct.
   factory Track.fromJson(Map<String, dynamic> json) {
     return Track(
       albumName: json['albumName'] as String? ?? '',
@@ -45,32 +49,29 @@ class Track {
     );
   }
 
-  /// **UPDATED CONSTRUCTOR FOR SHOWS PAGE**
-  /// Creates a Track from the new compact `data_opt.json` format.
-  /// Requires albumName and artistName to be passed in from the parent Show object.
-  /// Now uses index-based track numbering instead of JSON 'n' field.
+  /// Updated constructor for compact data (ShowsPage).
+  /// Now requires a shnid.
   factory Track.fromJsonCompact(
     Map<String, dynamic> json, {
     required String albumName,
     required String artistName,
-    required int trackIndex, // NEW: Track index for proper numbering
+    required int trackIndex,
+    required String shnid, // Now required
   }) {
     return Track(
       albumName: albumName,
       artistName: artistName,
-      trackArtistName: artistName, // In the new format, track artist is the same as the show artist.
+      trackArtistName: artistName,
       trackDuration: _parseIntSafely(json['d']) ?? 0,
       trackName: json['t'] as String? ?? 'Unknown Track',
-      trackNumber: (trackIndex + 1).toString(), // Use 1-based index instead of JSON 'n'
+      trackNumber: (trackIndex + 1).toString(),
       url: json['u'] as String? ?? '',
-      // Artwork is not present in this format, so it will be null, as requested.
+      shnid: shnid, // Assign the shnid
       albumArt: null,
       albumReleaseNumber: null,
       albumReleaseDate: null,
     );
   }
-
-  // --- The rest of the file remains the same ---
 
   Map<String, dynamic> toJson() {
     return {
@@ -84,6 +85,7 @@ class Track {
       'albumArt': albumArt,
       'albumReleaseNumber': albumReleaseNumber,
       'albumReleaseDate': albumReleaseDate,
+      'shnid': shnid, // Added here
     };
   }
   
@@ -98,6 +100,7 @@ class Track {
     String? albumArt,
     int? albumReleaseNumber,
     String? albumReleaseDate,
+    String? shnid, // Added here
   }) {
     return Track(
       albumName: albumName ?? this.albumName,
@@ -110,6 +113,7 @@ class Track {
       albumArt: albumArt ?? this.albumArt,
       albumReleaseNumber: albumReleaseNumber ?? this.albumReleaseNumber,
       albumReleaseDate: albumReleaseDate ?? this.albumReleaseDate,
+      shnid: shnid ?? this.shnid, // Added here
     );
   }
 
@@ -138,11 +142,12 @@ class Track {
         other.albumName == albumName &&
         other.trackName == trackName &&
         other.trackArtistName == trackArtistName &&
-        other.url == url;
+        other.url == url &&
+        other.shnid == shnid; // Include in equality check
   }
 
   @override
   int get hashCode {
-    return Object.hash(albumName, trackName, trackArtistName, url);
+    return Object.hash(albumName, trackName, trackArtistName, url, shnid); // Include in hash
   }
 }

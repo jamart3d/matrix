@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// The unused import for 'settings_page.dart' has been removed.
 
 class MyDrawer extends StatelessWidget {
   const MyDrawer({super.key});
@@ -9,7 +8,6 @@ class MyDrawer extends StatelessWidget {
     return Drawer(
       child: Column(
         children: [
-          // Using the custom DrawerHeader with a Stack for the background image
           DrawerHeader(
             padding: EdgeInsets.zero,
             margin: EdgeInsets.zero,
@@ -25,7 +23,7 @@ class MyDrawer extends StatelessWidget {
                 ),
                 const Center(
                   child: Text(
-                    'HunTrix',
+                    'matrix',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 32,

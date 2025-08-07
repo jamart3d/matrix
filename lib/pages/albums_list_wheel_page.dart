@@ -75,7 +75,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
 
   void _setupInitialAlbumScroll() {
     if (!mounted) return;
-    final currentlyPlaying = context.read<TrackPlayerProvider>().currentlyPlayingSong;
+    final currentlyPlaying = context.read<TrackPlayerProvider>().currentTrack ;
     if (currentlyPlaying != null) {
       _updateCurrentAlbum(currentlyPlaying);
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrentAlbum(animate: false));
@@ -129,7 +129,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
   @override
   Widget build(BuildContext context) {
     // Listen to the provider to update the background art in real-time
-    final currentlyPlaying = context.watch<TrackPlayerProvider>().currentlyPlayingSong;
+    final currentlyPlaying = context.watch<TrackPlayerProvider>().currentTrack ;
     _updateCurrentAlbum(currentlyPlaying);
 
     return Scaffold(

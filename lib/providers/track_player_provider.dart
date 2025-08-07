@@ -1,10 +1,14 @@
+// lib/providers/track_player_provider.dart
+
 import 'dart:async';
-import 'dart:io';
+import 'dart:io'; // <-- THE FIX IS HERE: This import was missing.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:huntrix/models/track.dart';
+import 'package:huntrix/services/album_data_service.dart';
+import 'package:huntrix/utils/album_utils.dart';
 import 'package:huntrix/utils/duration_formatter.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
@@ -17,44 +21,37 @@ class TrackPlayerProvider extends ChangeNotifier {
   ConcatenatingAudioSource? _concatenatingAudioSource;
   int _currentIndex = 0;
 
-  // Cached data for the current track
   String? _cachedAlbumArt;
   String? _cachedArtistName;
   String? _cachedAlbumTitle;
 
-  // State Management
   String? _lastError;
   bool _isLoading = false;
+  bool _isPlaying = false;
 
-  // --- Public Getters ---
   String get formattedCurrentDuration => formatDuration(audioPlayer.position);
-  String get formattedTotalDuration => formatDuration(audioPlayer.duration ?? Duration.zero);
-  bool get isPlaying => audioPlayer.playing;
+  String get formattedTotalDuration =>
+      formatDuration(audioPlayer.duration ?? Duration.zero);
+  bool get isPlaying => _isPlaying;
   bool get isLoading => _isLoading;
   String? get lastError => _lastError;
   int get currentIndex => _currentIndex;
   Duration get currentDuration => audioPlayer.position;
   Duration get totalDuration => audioPlayer.duration ?? Duration.zero;
   List<Track> get playlist => List.unmodifiable(_playlist);
-  
-  Track? get currentTrack => _currentIndex >= 0 && _currentIndex < _playlist.length ? _playlist[_currentIndex] : null;
-  
-  Track? get currentlyPlayingSong => currentTrack;
-
+  Track? get currentTrack =>
+      _currentIndex >= 0 && _currentIndex < _playlist.length
+          ? _playlist[_currentIndex]
+          : null;
   String get currentAlbumArt => _cachedAlbumArt ?? 'assets/images/t_steal.webp';
   String get currentArtistName => _cachedArtistName ?? 'Unknown Artist';
   String get currentAlbumTitle => _cachedAlbumTitle ?? 'Unknown Album';
-
-  // ** STREAM GETTERS RESTORED **
-  // These are required for the UI to listen to player events directly.
   Stream<Duration> get positionStream => audioPlayer.positionStream;
   Stream<Duration?> get durationStream => audioPlayer.durationStream;
   Stream<PlayerState> get playerStateStream => audioPlayer.playerStateStream;
-
-  // --- Internal State ---
+  
   final List<Track> _playlist = [];
 
-  // Constructor
   TrackPlayerProvider() {
     logger.i("TrackPlayerProvider initialized.");
     _listenToAudioPlayerEvents();
@@ -66,8 +63,7 @@ class TrackPlayerProvider extends ChangeNotifier {
     audioPlayer.dispose();
     super.dispose();
   }
-
-  // --- Internal Helpers ---
+  
   void _setError(String error) {
     _lastError = error;
     _isLoading = false;
@@ -82,33 +78,88 @@ class TrackPlayerProvider extends ChangeNotifier {
   }
 
   void _listenToAudioPlayerEvents() {
-    logger.i("Setting up audio player event listeners.");
-
     audioPlayer.playerStateStream.listen((state) {
+      bool needsUpdate = false;
       final wasLoading = _isLoading;
-      _isLoading = state.processingState == ProcessingState.loading || state.processingState == ProcessingState.buffering;
-      
-      if (wasLoading != _isLoading) {
-        notifyListeners();
+      _isLoading = state.processingState == ProcessingState.loading ||
+          state.processingState == ProcessingState.buffering;
+      if (wasLoading != _isLoading) needsUpdate = true;
+      if (_isPlaying != state.playing) {
+        _isPlaying = state.playing;
+        needsUpdate = true;
       }
+      if (needsUpdate) notifyListeners();
     });
 
     audioPlayer.currentIndexStream.distinct().listen((index) {
       if (index != null && index >= 0 && index < _playlist.length) {
-        logger.i("Audio player moved to index: $index.");
         _currentIndex = index;
         _loadAlbumAndArtistData();
         notifyListeners();
       }
     });
   }
-  
-  Future<void> _loadAlbumAndArtistData() async {
+
+  void _loadAlbumAndArtistData() {
     if (currentTrack == null) return;
     logger.i("Loading metadata for: ${currentTrack!.trackName}");
-    _cachedAlbumArt = currentTrack!.albumArt;
+
     _cachedArtistName = currentTrack!.trackArtistName;
     _cachedAlbumTitle = currentTrack!.albumName;
+
+    if (currentTrack!.albumArt != null && currentTrack!.albumArt!.isNotEmpty) {
+      _cachedAlbumArt = currentTrack!.albumArt;
+    } else {
+      logger.d("Track has no art. Getting release number from AlbumDataService...");
+      final releaseNumber = AlbumDataService().getReleaseNumberForAlbum(currentTrack!.albumName);
+
+      if (releaseNumber != null) {
+        _cachedAlbumArt = generateAlbumArt(releaseNumber);
+        logger.i("Generated art path for '${currentTrack!.albumName}': $_cachedAlbumArt");
+      } else {
+        logger.w("Could not find release number for '${currentTrack!.albumName}' in cache.");
+        _cachedAlbumArt = 'assets/images/t_steal.webp';
+      }
+    }
+  }
+
+  Future<void> replacePlaylistAndPlay(
+    List<Track> tracks, {
+    int initialIndex = 0,
+  }) async {
+    logger.i(
+        "Replacing playlist with ${tracks.length} new tracks, starting from index $initialIndex.");
+    _clearError();
+
+    try {
+      await audioPlayer.stop();
+      _playlist.clear();
+      _concatenatingAudioSource = null;
+
+      _playlist.addAll(tracks);
+      _currentIndex = initialIndex.clamp(0, tracks.length - 1);
+
+      _loadAlbumAndArtistData();
+
+      if (_playlist.isEmpty) {
+        logger.w("Cannot play an empty playlist.");
+        return;
+      }
+
+      final sources =
+          await Future.wait(_playlist.map(_createAudioSourceFromTrack));
+      _concatenatingAudioSource = ConcatenatingAudioSource(children: sources);
+
+      await audioPlayer.setAudioSource(
+        _concatenatingAudioSource!,
+        initialIndex: _currentIndex,
+      );
+
+      await audioPlayer.play();
+    } catch (e, stacktrace) {
+      logger.e("Error replacing playlist", error: e, stackTrace: stacktrace);
+      _setError("Failed to start new playlist.");
+    }
   }
 
   Future<Uri> _saveAssetToTempFile(String assetPath) async {
@@ -125,15 +176,18 @@ class TrackPlayerProvider extends ChangeNotifier {
       rethrow;
     }
   }
-
+  
   Future<AudioSource> _createAudioSourceFromTrack(Track track) async {
     final audioUri = track.url.startsWith('assets/')
         ? await _saveAssetToTempFile(track.url)
         : Uri.parse(track.url);
 
-    final artUri = await _saveAssetToTempFile(track.albumArt ?? 'assets/images/t_steal.webp');
-    
-    final uniqueId = '${track.trackName}_${track.trackArtistName}_${track.albumName}'.replaceAll(RegExp(r'[^\w\-_]'), '');
+    final artUri = await _saveAssetToTempFile(
+        _cachedAlbumArt ?? 'assets/images/t_steal.webp');
+
+    final uniqueId =
+        '${track.trackName}_${track.trackArtistName}_${track.albumName}'
+            .replaceAll(RegExp(r'[^\w\-_]'), '');
 
     return AudioSource.uri(
       audioUri,
@@ -145,44 +199,6 @@ class TrackPlayerProvider extends ChangeNotifier {
         artUri: artUri,
       ),
     );
-  }
-
-  // --- Public API Methods ---
-
-  Future<void> replacePlaylistAndPlay(
-    List<Track> tracks, {
-    int initialIndex = 0,
-  }) async {
-    logger.i("Replacing playlist with ${tracks.length} new tracks, starting from index $initialIndex.");
-    _clearError();
-    
-    try {
-      await audioPlayer.stop();
-      _playlist.clear();
-      _concatenatingAudioSource = null;
-
-      _playlist.addAll(tracks);
-      _currentIndex = initialIndex.clamp(0, tracks.length - 1);
-
-      if (_playlist.isEmpty) {
-        logger.w("Cannot play an empty playlist.");
-        return;
-      }
-      
-      final sources = await Future.wait(_playlist.map(_createAudioSourceFromTrack));
-      _concatenatingAudioSource = ConcatenatingAudioSource(children: sources);
-
-      await audioPlayer.setAudioSource(
-        _concatenatingAudioSource!,
-        initialIndex: _currentIndex,
-      );
-      
-      await audioPlayer.play();
-
-    } catch (e, stacktrace) {
-      logger.e("Error replacing playlist", error: e, stackTrace: stacktrace);
-      _setError("Failed to start new playlist.");
-    }
   }
 
   Future<void> play() async {
@@ -229,7 +245,7 @@ class TrackPlayerProvider extends ChangeNotifier {
       _setError("Failed to seek to position.");
     }
   }
-  
+
   Future<void> clearPlaylist() async {
     logger.w("Clearing playlist and stopping audio.");
     try {

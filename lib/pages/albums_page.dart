@@ -1,13 +1,15 @@
+// lib/pages/albums_page.dart
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:huntrix/components/my_drawer.dart';
 import 'package:huntrix/helpers/album_helper.dart';
 import 'package:huntrix/models/track.dart';
 import 'package:huntrix/pages/album_detail_page.dart';
-import 'package:huntrix/pages/albums_grid_page.dart';
+// import 'package:huntrix/pages/albums_grid_page.dart'; // Commented out as per request
 import 'package:huntrix/providers/track_player_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:huntrix/utils/load_json_data.dart';
+import 'package:huntrix/services/album_data_service.dart';
 import 'package:huntrix/utils/album_utils.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:huntrix/providers/album_settings_provider.dart';
@@ -65,12 +67,14 @@ class _AlbumsPageState extends State<AlbumsPage>
   Future<void> _initializeData() async {
     await _loadData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkConnection();
+      if (mounted) {
+        _checkConnection();
+      }
     });
   }
 
   void _updateCurrentAlbumFromProvider(TrackPlayerProvider trackPlayerProvider) {
-    final currentlyPlayingSong = trackPlayerProvider.currentlyPlayingSong;
+    final currentlyPlayingSong = trackPlayerProvider.currentTrack;
 
     if (currentlyPlayingSong == null && _currentAlbumName != null) {
       setState(() {
@@ -81,7 +85,7 @@ class _AlbumsPageState extends State<AlbumsPage>
     }
 
     if (currentlyPlayingSong != null) {
-      final newAlbumArt = currentlyPlayingSong.albumArt ?? _defaultAlbumArt;
+      final newAlbumArt = trackPlayerProvider.currentAlbumArt; // Get art from provider
       final newAlbumName = currentlyPlayingSong.albumName;
 
       if (newAlbumArt != _currentAlbumArt || newAlbumName != _currentAlbumName) {
@@ -99,8 +103,8 @@ class _AlbumsPageState extends State<AlbumsPage>
 
   Future<void> _loadData() async {
     try {
-      _logger.i('Loading album data...');
-      await loadData(context, (albumData) {
+      _logger.i('Loading and caching album data...');
+      await AlbumDataService().loadAndCacheAlbumData(context, (albumData) {
         if (mounted) {
           setState(() {
             _cachedAlbumData = albumData;
@@ -136,7 +140,6 @@ class _AlbumsPageState extends State<AlbumsPage>
   }
 
   String _getConnectionErrorMessage(String result) {
-    // ... (same as before)
     switch (result) {
       case 'Temporarily Offline.\nonly release 105 is available.':
         return 'The archive.org page is temporarily offline.\nOnly release 105 is available.';
@@ -196,6 +199,9 @@ class _AlbumsPageState extends State<AlbumsPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    
+    /*
+    // LOGIC TO SWITCH TO GRID VIEW ON WIDER SCREENS - COMMENTED OUT AS REQUESTED
     if (MediaQuery.of(context).size.width > 600) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacement(
@@ -205,6 +211,8 @@ class _AlbumsPageState extends State<AlbumsPage>
       });
       return const SizedBox.shrink();
     }
+    */
+
     return Scaffold(
       appBar: _buildAppBar(),
       drawer: const MyDrawer(),
@@ -217,7 +225,7 @@ class _AlbumsPageState extends State<AlbumsPage>
     return AppBar(
       centerTitle: true,
       backgroundColor: Colors.black,
-      title: const Text("Select a random trix -->"),
+      title: const Text("Select a random matix -->"),
       actions: [
         IconButton(
           icon: const Icon(Icons.question_mark),
@@ -322,7 +330,6 @@ class _AlbumsPageState extends State<AlbumsPage>
   }
 
   Widget _buildAlbumCard(Map<String, dynamic> album, AlbumSettingsProvider albumSettings) {
-    // ... (same as before)
     final albumName = album['album'] as String;
     final albumArt = album['albumArt'] as String;
     final index = _cachedAlbumData!.indexOf(album);
@@ -343,7 +350,6 @@ class _AlbumsPageState extends State<AlbumsPage>
   }
 
   Widget _buildAlbumArt(String albumArt, int index, bool isCurrentAlbum) {
-    // ... (same as before)
     final screenWidth = MediaQuery.of(context).size.width;
     return ClipRRect(
       borderRadius: BorderRadius.circular(4.0),
@@ -376,7 +382,6 @@ class _AlbumsPageState extends State<AlbumsPage>
   }
 
   Widget _buildAlbumInfo(String albumName, int index, AlbumSettingsProvider albumSettings, bool isCurrentAlbum, Color shadowColor) {
-    // ... (same as before)
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.only(left: 12.0),
@@ -431,7 +436,7 @@ class _AlbumsPageState extends State<AlbumsPage>
       );
     }
 
-    if (playerProvider.currentlyPlayingSong != null) {
+    if (playerProvider.currentTrack  != null) {
       return FloatingActionButton(
         onPressed: () {
           _scrollToCurrentAlbum();

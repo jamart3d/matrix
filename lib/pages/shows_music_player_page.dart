@@ -1,10 +1,13 @@
+// lib/pages/shows_music_player_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:huntrix/providers/album_settings_provider.dart'; // Import settings
 import 'package:huntrix/providers/track_player_provider.dart';
 import 'package:huntrix/utils/duration_formatter.dart';
 import 'package:huntrix/components/player/progress_bar.dart';
+import 'package:marquee/marquee.dart'; // Import marquee
 
-// Convert to a StatefulWidget to manage the ScrollController
 class ShowsMusicPlayerPage extends StatefulWidget {
   const ShowsMusicPlayerPage({super.key});
 
@@ -18,7 +21,6 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
   @override
   void initState() {
     super.initState();
-    // After the first frame, scroll to the currently playing track.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final provider = context.read<TrackPlayerProvider>();
@@ -33,10 +35,9 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
     super.dispose();
   }
 
-  // Helper method to scroll the list to the current index.
   void _scrollToCurrent(int index) {
     if (_scrollController.hasClients && index >= 0) {
-      final itemHeight = 56.0; // Approximate height of a ListTile
+      final itemHeight = 56.0;
       final targetOffset = (index * itemHeight) - (MediaQuery.of(context).size.height / 4);
       _scrollController.animateTo(
         targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
@@ -49,6 +50,8 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
   @override
   Widget build(BuildContext context) {
     final trackPlayerProvider = context.watch<TrackPlayerProvider>();
+    // --- Watch settings provider for changes ---
+    final settingsProvider = context.watch<AlbumSettingsProvider>();
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -59,7 +62,18 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
         foregroundColor: Colors.white,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(trackPlayerProvider.currentAlbumTitle),
+        // --- CONDITIONAL MARQUEE TITLE ---
+        title: settingsProvider.marqueePlayerTitle
+            ? SizedBox(
+                height: 30, // Give the marquee a constrained height
+                child: Marquee(
+                  text: trackPlayerProvider.currentAlbumTitle,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  velocity: 40.0,
+                  blankSpace: 30.0,
+                ),
+              )
+            : Text(trackPlayerProvider.currentAlbumTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep),
@@ -70,32 +84,24 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
       ),
       body: Column(
         children: [
-          // Track list takes up most of the space
           Expanded(
             child: _buildTrackList(context, trackPlayerProvider),
           ),
-          // Progress bar and controls at the bottom
           Container(
             padding: const EdgeInsets.all(16.0),
             color: Colors.black,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Use your existing ProgressBar widget
                 ProgressBar(provider: trackPlayerProvider),
                 const SizedBox(height: 16.0),
-                // Control buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // Previous button
                     IconButton(
                       icon: const Icon(Icons.skip_previous, size: 48.0, color: Colors.white),
-                      onPressed: () {
-                        trackPlayerProvider.previous();
-                      },
+                      onPressed: trackPlayerProvider.previous,
                     ),
-                    // Play/Pause button
                     IconButton(
                       icon: Icon(
                         trackPlayerProvider.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
@@ -110,12 +116,9 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
                         }
                       },
                     ),
-                    // Next button
                     IconButton(
                       icon: const Icon(Icons.skip_next, size: 48.0, color: Colors.white),
-                      onPressed: () {
-                        trackPlayerProvider.next();
-                      },
+                      onPressed: trackPlayerProvider.next,
                     ),
                   ],
                 ),
@@ -128,6 +131,7 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
   }
 
   Widget _buildTrackList(BuildContext context, TrackPlayerProvider trackPlayerProvider) {
+    // ... This method remains unchanged
     final Color shadowColor = Colors.redAccent;
     final playlist = trackPlayerProvider.playlist;
     final currentIndex = trackPlayerProvider.currentIndex;
@@ -143,7 +147,6 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
         controller: _scrollController,
         itemCount: playlist.length,
         itemBuilder: (context, index) {
-          // **SAFETY CHECK:** Prevents the out of bounds error.
           if (index >= playlist.length) return const SizedBox.shrink();
 
           final track = playlist[index];
@@ -187,6 +190,7 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
   }
   
   void _showClearPlaylistDialog(BuildContext context, TrackPlayerProvider provider) {
+    // ... This method remains unchanged
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {

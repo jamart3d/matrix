@@ -1,3 +1,5 @@
+// lib/pages/music_player_page.dart
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -35,7 +37,6 @@ class _MusicPlayerPageState extends State<MusicPlayerPage>
           CurvedAnimation(parent: _animationController, curve: Curves.easeIn)
         );
 
-    // Use a post-frame callback to ensure the widget is built before animating
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _animationController.forward();
@@ -158,7 +159,7 @@ class _MusicPlayerPageState extends State<MusicPlayerPage>
                           textAlign: TextAlign.center,
                         ),
                         const Spacer(),
-                        const _PlaybackControls(), // Pass provider via context
+                        const _PlaybackControls(), 
                         const Gap(20),
                         _ProgressBar(trackPlayerProvider: trackPlayerProvider),
                         const Gap(20),
@@ -173,7 +174,7 @@ class _MusicPlayerPageState extends State<MusicPlayerPage>
 
   Widget _buildAlbumArt(String albumArt) {
     return AspectRatio(
-      aspectRatio: 1, // Make the album art container square
+      aspectRatio: 1,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: Image.asset(
@@ -194,45 +195,7 @@ class _PlaybackControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // This central button will now change based on the player's state.
-    Widget buildCenterButton() {
-      // Use context.watch to get the latest provider state and rebuild when it changes.
-      final provider = context.watch<TrackPlayerProvider>();
-
-      // Case 1: Player is actively loading or buffering.
-      if (provider.isLoading) {
-        return const SizedBox(
-          width: 60,
-          height: 60,
-          child: CircularProgressIndicator(
-            strokeWidth: 3.0,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
-          ),
-        );
-      }
-
-      // Case 2: Player is ready, show play/pause button.
-      return IconButton(
-        icon: Icon(
-          provider.isPlaying ? Icons.pause_circle : Icons.play_circle,
-          size: 60,
-          color: Colors.yellow,
-          shadows: const [
-            Shadow(color: Colors.redAccent, blurRadius: 3),
-            Shadow(color: Colors.redAccent, blurRadius: 6),
-          ],
-        ),
-        onPressed: () {
-          if (provider.isPlaying) {
-            provider.pause();
-          } else {
-            provider.play();
-          }
-        },
-      );
-    }
-    
-    // Get provider once for the side buttons so they don't cause rebuilds.
+    // We get the provider once for the side buttons.
     final trackPlayerProvider = context.read<TrackPlayerProvider>();
 
     return Row(
@@ -251,7 +214,47 @@ class _PlaybackControls extends StatelessWidget {
           onPressed: trackPlayerProvider.previous,
         ),
         const Gap(20),
-        buildCenterButton(),
+        
+        // --- FIX IS HERE ---
+        // This Consumer widget will listen for changes and rebuild ONLY the center button.
+        Consumer<TrackPlayerProvider>(
+          builder: (context, provider, child) {
+            // Case 1: Player is loading.
+            if (provider.isLoading) {
+              return const SizedBox(
+                width: 60,
+                height: 60,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3.0,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
+                ),
+              );
+            }
+
+            // Case 2: Player is ready, so show the correct play/pause icon.
+            return IconButton(
+              icon: Icon(
+                provider.isPlaying ? Icons.pause_circle : Icons.play_circle,
+                size: 60,
+                color: Colors.yellow,
+                shadows: const [
+                  Shadow(color: Colors.redAccent, blurRadius: 3),
+                  Shadow(color: Colors.redAccent, blurRadius: 6),
+                ],
+              ),
+              onPressed: () {
+                // The onPressed callback now correctly toggles the state.
+                if (provider.isPlaying) {
+                  provider.pause();
+                } else {
+                  provider.play();
+                }
+              },
+            );
+          },
+        ),
+        // --- END OF FIX ---
+        
         const Gap(20),
         IconButton(
           icon: const Icon(

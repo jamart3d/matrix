@@ -1,39 +1,85 @@
 import 'package:huntrix/models/track.dart';
 
 class Show {
-  final String name;
+  // Properties defining the conceptual show.
+  final String uniqueId; // e.g., "Grateful Dead-1977-05-08"
+  final String name; // The full album name from the first source
   final String artist;
-  final List<Track> tracks;
+  final String date;
+  final String year;
+  final String venue;
+
+  // A map of sources. Key is the shnid (String), value is the list of tracks for that source.
+  final Map<String, List<Track>> sources;
 
   Show({
+    required this.uniqueId,
     required this.name,
     required this.artist,
-    required this.tracks,
+    required this.date,
+    required this.year,
+    required this.venue,
+    required this.sources,
   });
 
+  // --- NEW: Add this factory constructor back ---
+  /// Creates a Show instance from a JSON object.
+  /// This is used for pre-structured data sources like 'data_opt.json'.
+  /// It assumes the JSON represents a show with a single source/shnid.
   factory Show.fromJson(Map<String, dynamic> json) {
-    final String showName = json['name'] as String? ?? 'Unknown Show';
-    final String showArtist = json['artist'] as String? ?? 'Unknown Artist';
-    
-    var trackList = json['tracks'] as List? ?? [];
-    
-    // **UPDATED:** Use asMap().entries to get both index and track data
-    List<Track> parsedTracks = trackList.asMap().entries.map((entry) {
-      final trackIndex = entry.key; // 0-based index from JSON order
-      final trackJson = entry.value; // The actual track JSON data
-      
-      return Track.fromJsonCompact(
-        trackJson,
-        albumName: showName,
-        artistName: showArtist,
-        trackIndex: trackIndex, // Pass the index for proper numbering
-      );
+    // 1. Parse all the simple properties, providing default values for safety.
+    final showName = json['name'] as String? ?? 'Unknown Show';
+    final showArtist = json['artist'] as String? ?? 'Unknown Artist';
+    final showDate = json['date'] as String? ?? 'Unknown Date';
+    final showYear = json['year'] as String? ?? 'Unknown Year';
+    final shnid = json['shnid'] as String? ?? '0';
+    final tracksJson = json['tracks'] as List? ?? [];
+
+    final List<Track> parsedTracks = tracksJson.map((trackJson) {
+      // First, create the track using the standard constructor
+      final track = Track.fromJson(trackJson as Map<String, dynamic>);
+      // Now, create a copy of the track, but with the correct shnid
+      return track.copyWith(shnid: shnid);
     }).toList();
 
+    // 3. Derive the venue and uniqueId for consistency with the other data loader.
+    final venueRegex = RegExp(r'Live at (.+?) on');
+    final venue = venueRegex.firstMatch(showName)?.group(1) ?? 'Unknown Venue';
+    final uniqueId = '$showArtist-$showDate-$venue';
+
+    // 4. Return a new Show instance.
+    // The 'sources' map is created with a single entry for this shnid.
     return Show(
+      uniqueId: uniqueId,
       name: showName,
       artist: showArtist,
-      tracks: parsedTracks,
+      date: showDate,
+      year: showYear,
+      venue: venue,
+      sources: {
+        shnid: parsedTracks,
+      },
     );
   }
+
+  // --- Helper Getters (Unchanged) ---
+
+  bool get hasSources => sources.isNotEmpty;
+  int get sourceCount => sources.length;
+  List<Track> get primaryTracks => sources.values.firstOrNull ?? [];
+  String get displayName => '$venue - $date';
+
+  @override
+  String toString() {
+    return 'Show(name: $displayName, artist: $artist, sources: ${sources.length})';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Show && other.uniqueId == uniqueId;
+  }
+
+  @override
+  int get hashCode => uniqueId.hashCode;
 }

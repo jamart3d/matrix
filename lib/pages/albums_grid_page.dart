@@ -86,7 +86,7 @@ class _AlbumsGridPageState extends State<AlbumsGridPage> with AutomaticKeepAlive
 
   /// Refactored: This method now *only* handles provider updates.
   void _updateStateFromProvider(TrackPlayerProvider provider) {
-    final currentlyPlaying = provider.currentlyPlayingSong;
+    final currentlyPlaying = provider.currentTrack ;
     if (currentlyPlaying == null) return;
     
     final newAlbumArt = currentlyPlaying.albumArt ?? 'assets/images/t_steal.webp';

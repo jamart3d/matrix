@@ -27,7 +27,7 @@ class AboutPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Thank you Hunter! and The Grateful Dead!',
+              'Thank you Archive.org! and The Grateful Dead!',
               style: TextStyle(
                   fontSize: 20,
                   color: Colors.white,

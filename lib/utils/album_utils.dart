@@ -64,6 +64,8 @@ void assignAlbumArtToTracks(
       await precacheImage(AssetImage(albumArt), context);
     }
   }
-  
+
+
 
 }
+

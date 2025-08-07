@@ -1,69 +1,99 @@
+// lib/utils/load_json_data.dart
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'package:huntrix/models/show.dart';
 import 'package:huntrix/models/track.dart';
-import 'package:huntrix/utils/album_utils.dart'; // Still needed for assignAlbumArtToTracks
+import 'package:huntrix/utils/album_utils.dart';
 
-/// **REFACTORED**
-/// Loads data from the new 'data_opt.json', parses it into Show objects,
-/// and then transforms that data into the Map structure required by the AlbumsPage.
-Future<void> loadData(BuildContext context, Function(List<Map<String, dynamic>>?) callback) async {
+/// Correctly loads and parses `data_opt.json` which uses a compact key format.
+Future<void> loadData(BuildContext context,
+    Function(List<Map<String, dynamic>>?) callback) async {
   try {
-    // 1. Load the raw JSON string from the new file.
-    final jsonString = await DefaultAssetBundle.of(context).loadString('assets/data_opt.json');
+    // 1. Load the raw JSON string from the asset.
+    final jsonString =
+        await DefaultAssetBundle.of(context).loadString('assets/data_opt.json');
     final List<dynamic> jsonData = jsonDecode(jsonString);
 
-    // 2. Parse the JSON into a list of strongly-typed Show objects.
-    // This uses the updated Show.fromJson and Track.fromJson constructors.
-    final List<Show> shows = jsonData.map((item) => Show.fromJson(item)).toList();
-    
-    // 3. Transform the List<Show> into the List<Map<String, dynamic>> that the UI expects.
-    final albumDataList = _createAlbumDataListFromShows(shows);
-    
-    callback(albumDataList);
-  } catch (e) {
-    debugPrint("Error loading or processing data_opt.json: $e");
-    if (context.mounted) _showErrorSnackBar(context, 'Error loading data: $e');
-    callback(null); // Ensure callback is always called
-  }
-}
+    // This list will hold the final, UI-ready data.
+    final List<Map<String, dynamic>> albumDataList = [];
+    // This map is used temporarily to make album art assignment easy.
+    final Map<String, List<Track>> albumTracksMapForArt = {};
 
-/// **REFACTORED**
-/// Transforms a list of Show objects into the data structure needed by the AlbumsPage.
-List<Map<String, dynamic>> _createAlbumDataListFromShows(List<Show> shows) {
-  // We still need to create a map of tracks to assign album art correctly.
-  // The key is the album name (show.name) and the value is the list of tracks.
-  final Map<String, List<Track>> albumTracks = {
-    for (var show in shows) show.name: show.tracks
-  };
+    int releaseCounter = 1;
 
-  // The album art assignment logic can now be simplified as it's part of the show-to-album transformation.
-  final Map<String, int> albumIndex = {};
-  int index = 1;
-  for (final albumName in albumTracks.keys) {
-    albumIndex[albumName] = index++;
-  }
-  assignAlbumArtToTracks(albumTracks, albumIndex);
+    // 2. Iterate over each album object in the JSON array.
+    for (final albumJson in jsonData) {
+      if (albumJson is Map<String, dynamic>) {
+        final String albumName = albumJson['name'] ?? 'Unknown Album';
+        final String artistName = albumJson['artist'] ?? 'Unknown Artist';
+        final List<dynamic> tracksJson = albumJson['tracks'] ?? [];
+        
+        List<Track> parsedTracks = [];
+        
+        // 3. Iterate over the tracks within the current album.
+        for (final compactTrackJson in tracksJson) {
+          if (compactTrackJson is Map<String, dynamic>) {
+            
+            // *** THE FIX IS HERE ***
+            // We create a new Track object by manually mapping the compact keys ('t', 'd', 'u')
+            // to the full property names that the Track model expects.
+            final track = Track(
+              albumName: albumName,
+              artistName: artistName,
+              trackArtistName: artistName,
+              trackName: compactTrackJson['t'] as String? ?? 'Unknown Track',
+              trackDuration: (compactTrackJson['d'] as num? ?? 0).toInt(),
+              trackNumber: (compactTrackJson['n'] as num? ?? 0).toString(),
+              url: compactTrackJson['u'] as String? ?? '',
+            );
+            parsedTracks.add(track);
+          }
+        }
+        
+        // Store tracks for later art assignment.
+        albumTracksMapForArt[albumName] = parsedTracks;
 
-  // Now, map the shows to the final list structure.
-  return shows.map((show) {
-    // We get the (now art-populated) tracks for the current show.
-    final tracksWithArt = albumTracks[show.name] ?? [];
-    
-    return {
-      'album': show.name,
-      'songs': tracksWithArt,
-      'songCount': tracksWithArt.length,
-      'artistName': show.artist,
-      // Get the album art from the first track after it has been assigned.
-      'albumArt': tracksWithArt.isNotEmpty ? tracksWithArt.first.albumArt : 'assets/images/t_steal.webp',
-      'releaseNumber': albumIndex[show.name],
-      'releaseDate': show.name, // The show name is the date in the new format.
+        // 4. Build the album map structure that the UI pages expect.
+        albumDataList.add({
+          'album': albumName,
+          'songs': parsedTracks,
+          'songCount': parsedTracks.length,
+          'artistName': artistName,
+          'albumArt': 'assets/images/t_steal.webp', // Placeholder art
+          'releaseNumber': releaseCounter++,
+          'releaseDate': albumName, 
+        });
+      }
+    }
+
+    // 5. Assign the correct album art to each track.
+    final Map<String, int> albumIndexMap = {
+      for (var album in albumDataList) album['album']: album['releaseNumber']
     };
-  }).toList();
+    assignAlbumArtToTracks(albumTracksMapForArt, albumIndexMap);
+
+    // 6. Update the 'albumArt' in the main list with the newly assigned art.
+    for (var album in albumDataList) {
+      final tracks = album['songs'] as List<Track>;
+      if (tracks.isNotEmpty) {
+        album['albumArt'] = tracks.first.albumArt ?? 'assets/images/t_steal.webp';
+      }
+    }
+    
+    // Sort albums by their release number to ensure consistent order.
+    albumDataList.sort((a, b) => (a['releaseNumber'] as int).compareTo(b['releaseNumber'] as int));
+
+    callback(albumDataList);
+
+  } catch (e, stacktrace) {
+    debugPrint("Error loading or processing data_opt.json: $e");
+    debugPrintStack(stackTrace: stacktrace);
+    if (context.mounted) _showErrorSnackBar(context, 'Error loading album data.');
+    callback(null);
+  }
 }
 
-// Helper function to show an error snackbar
+// Helper to show an error message.
 void _showErrorSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
@@ -73,20 +103,3 @@ void _showErrorSnackBar(BuildContext context, String message) {
     ),
   );
 }
-
-// The old functions below are no longer needed with the new data structure.
-// You can safely delete them.
-
-/*
-Future<List<Track>> loadJsonData(BuildContext context) async {
-  // ... this logic is now inside loadData()
-}
-
-List<Map<String, dynamic>> _createAlbumDataList(Map<String, List<Track>> albumTracks) {
-  // ... this is replaced by _createAlbumDataListFromShows()
-}
-
-List<Map<String, dynamic>> _insertAlbumsWithout19Prefix(List<Map<String, dynamic>> albumDataList) {
-  // ... this is no longer needed as the new format is consistent
-}
-*/
