@@ -40,10 +40,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data.json
-    - assets/data_opt.json
-    - assets/archive_tracks_shnid.json
-    - assets/archive_tracks_shnid_sample_opt.json
-    - assets/archive_tracks_shnid_sample.json
     - assets/archive_tracks_shnid_opt.json
     - assets/images/
     - assets/images/t_steal.webp
