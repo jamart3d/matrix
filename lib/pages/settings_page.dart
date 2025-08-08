@@ -79,7 +79,6 @@ class SettingsPage extends StatelessWidget {
               const ListTile(
                 title: Text("Player Page", style: TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold)),
               ),
-              // --- NEW PLAYER MARQUEE SETTING ---
               SwitchListTile(
                 title: const Text('Scrolling Player Title', style: titleStyle),
                 subtitle: Text('Scroll long titles in the player app bar.', style: subtitleStyle),

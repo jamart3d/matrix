@@ -215,25 +215,10 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
 
                   return ExpansionTile(
                     tilePadding: const EdgeInsets.only(left: 32.0, right: 16.0),
-                    // --- FIX #1: Change the title text ---
-                    title: Text(
-                      "shnid: $shnid",
-                      style: TextStyle(
-                        color: isCurrentSource ? Colors.yellow : Colors.white70,
-                        fontWeight: isCurrentSource ? FontWeight.bold : FontWeight.normal,
-                        fontStyle: FontStyle.italic, 
-                        fontSize: 14,
-                      ),
-                    ),
-                    subtitle: Text(
-                      "${sourceTracks.length} tracks",
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
+                    title: Text("SHNID: $shnid", style: TextStyle(color: isCurrentSource ? Colors.yellow : Colors.white70, fontWeight: isCurrentSource ? FontWeight.bold : FontWeight.normal, fontStyle: FontStyle.italic, fontSize: 14)),
+                    subtitle: Text("${sourceTracks.length} tracks", style: const TextStyle(color: Colors.grey, fontSize: 12)),
                     iconColor: isCurrentSource ? Colors.yellow : Colors.white,
                     collapsedIconColor: Colors.white70,
-                    // --- FIX #2: Remove the leading IconButton ---
-                    // The GestureDetector on the Card now handles long press for all shows.
-                    // The user can still tap the source tile itself to expand and see tracks.
                     children: sourceTracks.map((track) => _buildTrackTile(track, sourceTracks)).toList(),
                   );
                 }).toList();
@@ -241,7 +226,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
               
               return GestureDetector(
                 onLongPress: () async {
-                  _logger.i("Long press detected on show: '${show.displayName}'. Replacing playlist.");
                   await playerProvider.clearPlaylist();
                   playTracklist(show.primaryTracks);
                   if (mounted) {
@@ -298,7 +282,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
           style: TextStyle(color: isCurrentlyPlaying ? Colors.yellow.withOpacity(0.8) : Colors.grey.shade400),
         ),
         onTap: () {
-           _logger.i("Playing track '${track.trackName}' from source '${track.shnid}'");
           playTracklistFrom(sourceTracks, track);
           Navigator.pushNamed(context, '/shows_music_player_page');
         },
@@ -325,7 +308,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     if (playerProvider.currentTrack != null) {
       return FloatingActionButton(
         onPressed: () {
-          _logger.d("Floating Action Button pressed.");
           _scrollToCurrentShow();
           Navigator.pushNamed(context, '/shows_music_player_page');
         },

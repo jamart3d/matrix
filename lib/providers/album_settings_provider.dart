@@ -11,7 +11,6 @@ class AlbumSettingsProvider extends ChangeNotifier {
   static const String _skipShowsPageKey = 'skipShowsPage';
   static const String _marqueeTitlesKey = 'marqueeTitles';
   static const String _showSortOrderKey = 'showSortOrder';
-  // --- NEW KEY ---
   static const String _marqueePlayerTitleKey = 'marqueePlayerTitle';
 
   // --- Setting 1: Display Release Order (Albums) ---
@@ -23,16 +22,14 @@ class AlbumSettingsProvider extends ChangeNotifier {
   bool get skipShowsPage => _skipShowsPage;
 
   // --- Setting 3: Marquee Titles (Shows Page List) ---
-  // --- DEFAULT CHANGED ---
   bool _marqueeTitles = false; // Default to false
   bool get marqueeTitles => _marqueeTitles;
 
   // --- Setting 4: Show Sort Order ---
-  // --- DEFAULT CHANGED ---
   ShowSortOrder _showSortOrder = ShowSortOrder.dateAscending; // Default to oldest first
   ShowSortOrder get showSortOrder => _showSortOrder;
 
-  // --- NEW Setting 5: Marquee Player Title ---
+  // --- Setting 5: Marquee Player Title ---
   bool _marqueePlayerTitle = true; // Default to true
   bool get marqueePlayerTitle => _marqueePlayerTitle;
 
@@ -45,23 +42,19 @@ class AlbumSettingsProvider extends ChangeNotifier {
     
     _displayAlbumReleaseNumber = prefs.getBool(_displayOrderKey) ?? false;
     _skipShowsPage = prefs.getBool(_skipShowsPageKey) ?? false;
-    // --- Use new default ---
     _marqueeTitles = prefs.getBool(_marqueeTitlesKey) ?? false; 
-    // --- Use new default ---
     _marqueePlayerTitle = prefs.getBool(_marqueePlayerTitleKey) ?? true;
 
-    // --- Use new default ---
     final savedSortOrder = prefs.getString(_showSortOrderKey);
     if (savedSortOrder == ShowSortOrder.dateDescending.toString()) {
       _showSortOrder = ShowSortOrder.dateDescending;
     } else {
-      _showSortOrder = ShowSortOrder.dateAscending; // Default to ascending
+      _showSortOrder = ShowSortOrder.dateAscending;
     }
     
     notifyListeners();
   }
 
-  // --- Setters for existing settings ---
   Future<void> setDisplayAlbumReleaseNumber(bool value) async {
     if (_displayAlbumReleaseNumber == value) return;
     _displayAlbumReleaseNumber = value;
@@ -97,8 +90,7 @@ class AlbumSettingsProvider extends ChangeNotifier {
     await prefs.setString(_showSortOrderKey, value.toString());
     notifyListeners();
   }
-
-  // --- Setter for NEW setting ---
+  
   Future<void> setMarqueePlayerTitle(bool value) async {
     if (_marqueePlayerTitle == value) return;
     _marqueePlayerTitle = value;

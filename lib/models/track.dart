@@ -11,7 +11,7 @@ class Track {
   String? albumArt;
   final int? albumReleaseNumber;
   final String? albumReleaseDate;
-  final String? shnid; // Added to identify the source
+  final String? shnid;
 
   Track({
     required this.albumName,
@@ -24,7 +24,7 @@ class Track {
     this.albumArt,
     this.albumReleaseNumber,
     this.albumReleaseDate,
-    this.shnid, // Added to constructor
+    this.shnid,
   });
 
   @override
@@ -32,8 +32,7 @@ class Track {
     return '$trackName - $trackArtistName';
   }
 
-  /// Constructor for data from 'data.json' (AlbumsPage).
-  /// shnid will be null here, which is correct.
+  /// Original constructor for `data.json`.
   factory Track.fromJson(Map<String, dynamic> json) {
     return Track(
       albumName: json['albumName'] as String? ?? '',
@@ -49,14 +48,13 @@ class Track {
     );
   }
 
-  /// Updated constructor for compact data (ShowsPage).
-  /// Now requires a shnid.
+  /// Constructor for compact data from `archive_tracks_...json` (ShowsPage).
   factory Track.fromJsonCompact(
     Map<String, dynamic> json, {
     required String albumName,
     required String artistName,
     required int trackIndex,
-    required String shnid, // Now required
+    required String shnid,
   }) {
     return Track(
       albumName: albumName,
@@ -66,10 +64,30 @@ class Track {
       trackName: json['t'] as String? ?? 'Unknown Track',
       trackNumber: (trackIndex + 1).toString(),
       url: json['u'] as String? ?? '',
-      shnid: shnid, // Assign the shnid
-      albumArt: null,
-      albumReleaseNumber: null,
-      albumReleaseDate: null,
+      shnid: shnid,
+    );
+  }
+  
+  // --- NEW, CORRECTED FACTORY FOR data_opt.json ---
+  /// Creates a Track from the compact format found in `data_opt.json`.
+  factory Track.fromAlbumOptJson({
+    required Map<String, dynamic> json,
+    required String albumName,
+    required String artistName,
+    required int albumReleaseNumber,
+    required String albumReleaseDate,
+  }) {
+    return Track(
+      albumName: albumName,
+      artistName: artistName,
+      trackArtistName: artistName,
+      trackDuration: _parseIntSafely(json['d']) ?? 0,
+      trackName: json['t'] as String? ?? 'Unknown Track',
+      trackNumber: (json['n'] as num? ?? 0).toString(), // Uses the 'n' key
+      url: json['u'] as String? ?? '',
+      albumReleaseNumber: albumReleaseNumber,
+      albumReleaseDate: albumReleaseDate,
+      shnid: null, // This data source has no shnid
     );
   }
 
@@ -85,7 +103,7 @@ class Track {
       'albumArt': albumArt,
       'albumReleaseNumber': albumReleaseNumber,
       'albumReleaseDate': albumReleaseDate,
-      'shnid': shnid, // Added here
+      'shnid': shnid,
     };
   }
   
@@ -100,7 +118,7 @@ class Track {
     String? albumArt,
     int? albumReleaseNumber,
     String? albumReleaseDate,
-    String? shnid, // Added here
+    String? shnid,
   }) {
     return Track(
       albumName: albumName ?? this.albumName,
@@ -113,7 +131,7 @@ class Track {
       albumArt: albumArt ?? this.albumArt,
       albumReleaseNumber: albumReleaseNumber ?? this.albumReleaseNumber,
       albumReleaseDate: albumReleaseDate ?? this.albumReleaseDate,
-      shnid: shnid ?? this.shnid, // Added here
+      shnid: shnid ?? this.shnid,
     );
   }
 
@@ -143,11 +161,11 @@ class Track {
         other.trackName == trackName &&
         other.trackArtistName == trackArtistName &&
         other.url == url &&
-        other.shnid == shnid; // Include in equality check
+        other.shnid == shnid;
   }
 
   @override
   int get hashCode {
-    return Object.hash(albumName, trackName, trackArtistName, url, shnid); // Include in hash
+    return Object.hash(albumName, trackName, trackArtistName, url, shnid);
   }
 }

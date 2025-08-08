@@ -1,7 +1,7 @@
 // lib/providers/track_player_provider.dart
 
 import 'dart:async';
-import 'dart:io'; // <-- THE FIX IS HERE: This import was missing.
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -28,7 +28,7 @@ class TrackPlayerProvider extends ChangeNotifier {
   String? _lastError;
   bool _isLoading = false;
   bool _isPlaying = false;
-
+  
   String get formattedCurrentDuration => formatDuration(audioPlayer.position);
   String get formattedTotalDuration =>
       formatDuration(audioPlayer.duration ?? Duration.zero);

@@ -4,7 +4,7 @@ description: "a list of hunter's matrix's and just_audio to play them from archi
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 
-version: 1.0.34+17
+version: 1.0.35+17
 
 environment:
   sdk: '>=3.4.3 <4.0.0'
@@ -39,7 +39,7 @@ flutter:
 
   uses-material-design: true
   assets:
-    - assets/data.json
+    - assets/data_opt.json
     - assets/archive_tracks_shnid_opt.json
     - assets/images/
     - assets/images/t_steal.webp
