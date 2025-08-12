@@ -1,9 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:huntrix/models/show.dart';
-import 'package:huntrix/models/track.dart';
-import 'package:huntrix/providers/track_player_provider.dart';
-import 'package:huntrix/services/navigation_service.dart'; // Corrected this import as well, it should be a .dart file
+import 'package:matrix/models/show.dart';
+import 'package:matrix/models/track.dart';
+import 'package:matrix/providers/track_player_provider.dart';
+import 'package:matrix/services/navigation_service.dart'; // Corrected this import as well, it should be a .dart file
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 

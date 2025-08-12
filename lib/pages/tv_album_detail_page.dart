@@ -3,11 +3,11 @@ import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:huntrix/helpers/album_helper.dart'; // Import the helper
-import 'package:huntrix/models/track.dart';
-import 'package:huntrix/pages/tv_now_playing_page.dart';
-import 'package:huntrix/providers/track_player_provider.dart';
-import 'package:huntrix/utils/duration_formatter.dart';
+import 'package:matrix/helpers/album_helper.dart'; // Import the helper
+import 'package:matrix/models/track.dart';
+import 'package:matrix/pages/tv_now_playing_page.dart';
+import 'package:matrix/providers/track_player_provider.dart';
+import 'package:matrix/utils/duration_formatter.dart';
 import 'package:provider/provider.dart';
 
 class TvAlbumDetailPage extends StatefulWidget {

@@ -4,10 +4,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:logger/logger.dart';
-import 'package:huntrix/pages/track_playlist_page.dart';
-import 'package:huntrix/providers/track_player_provider.dart';
+import 'package:matrix/pages/track_playlist_page.dart';
+import 'package:matrix/providers/track_player_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:huntrix/components/player/progress_bar.dart';
+import 'package:matrix/components/player/progress_bar.dart';
 
 class MusicPlayerPage extends StatefulWidget {
   const MusicPlayerPage({super.key});

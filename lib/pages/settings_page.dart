@@ -1,9 +1,9 @@
 // lib/pages/settings_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:huntrix/pages/about_page.dart';
+import 'package:matrix/pages/about_page.dart';
 import 'package:provider/provider.dart';
-import 'package:huntrix/providers/album_settings_provider.dart';
+import 'package:matrix/providers/album_settings_provider.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});

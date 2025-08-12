@@ -1,4 +1,4 @@
-import 'package:huntrix/models/track.dart';
+import 'package:matrix/models/track.dart';
 
 class Show {
   // Properties defining the conceptual show.

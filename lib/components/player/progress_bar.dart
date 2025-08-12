@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:huntrix/providers/track_player_provider.dart';
+import 'package:matrix/providers/track_player_provider.dart';
 
 class ProgressBar extends StatelessWidget {
   final TrackPlayerProvider provider;

@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'package:huntrix/models/track.dart';
-import 'package:huntrix/utils/album_utils.dart';
+import 'package:matrix/models/track.dart';
+import 'package:matrix/utils/album_utils.dart';
 
 Future<void> loadData(BuildContext context,
     Function(List<Map<String, dynamic>>?) callback) async {

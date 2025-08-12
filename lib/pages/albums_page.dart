@@ -2,18 +2,18 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:huntrix/components/my_drawer.dart';
-import 'package:huntrix/helpers/album_helper.dart';
-import 'package:huntrix/models/track.dart';
-import 'package:huntrix/pages/album_detail_page.dart';
-// import 'package:huntrix/pages/albums_grid_page.dart'; // Commented out as per request
-import 'package:huntrix/providers/track_player_provider.dart';
+import 'package:matrix/components/my_drawer.dart';
+import 'package:matrix/helpers/album_helper.dart';
+import 'package:matrix/models/track.dart';
+import 'package:matrix/pages/album_detail_page.dart';
+// import 'package:matrix/pages/albums_grid_page.dart'; // Commented out as per request
+import 'package:matrix/providers/track_player_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:huntrix/services/album_data_service.dart';
-import 'package:huntrix/utils/album_utils.dart';
+import 'package:matrix/services/album_data_service.dart';
+import 'package:matrix/utils/album_utils.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:huntrix/providers/album_settings_provider.dart';
-import 'package:huntrix/helpers/archive_alive_helper.dart';
+import 'package:matrix/providers/album_settings_provider.dart';
+import 'package:matrix/helpers/archive_alive_helper.dart';
 import 'package:logger/logger.dart';
 
 class AlbumsPage extends StatefulWidget {

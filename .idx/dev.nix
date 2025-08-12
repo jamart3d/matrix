@@ -26,7 +26,7 @@
       # Runs when a workspace is first created with this `dev.nix` file
       onCreate = {
         build-flutter = ''
-          cd /home/user/huntrix/android
+          cd /home/user/matrix/android
 
           ./gradlew \
             --parallel \

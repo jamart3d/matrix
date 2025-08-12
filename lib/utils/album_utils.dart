@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:huntrix/models/track.dart';
+import 'package:matrix/models/track.dart';
 
 Map<String, List<Track>> groupTracksByAlbum(List<Track> tracks) {
   return tracks.fold({}, (Map<String, List<Track>> albumMap, track) {

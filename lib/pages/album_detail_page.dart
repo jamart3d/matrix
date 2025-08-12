@@ -1,10 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:huntrix/models/track.dart';
-import 'package:huntrix/utils/duration_formatter.dart';
+import 'package:matrix/models/track.dart';
+import 'package:matrix/utils/duration_formatter.dart';
 import 'package:provider/provider.dart';
-import 'package:huntrix/providers/track_player_provider.dart';
+import 'package:matrix/providers/track_player_provider.dart';
 
 class AlbumDetailPage extends StatelessWidget {
   final List<Track> tracks;

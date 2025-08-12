@@ -1,4 +1,4 @@
-# huntrix
+# matrix
 
 A Flutter project to list and play Hunter's Matrix Grateful Dead shows hosted on archive.org.
 ## Getting Started

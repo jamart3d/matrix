@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:huntrix/providers/album_settings_provider.dart'; // Import settings
-import 'package:huntrix/providers/track_player_provider.dart';
-import 'package:huntrix/utils/duration_formatter.dart';
-import 'package:huntrix/components/player/progress_bar.dart';
+import 'package:matrix/providers/album_settings_provider.dart'; // Import settings
+import 'package:matrix/providers/track_player_provider.dart';
+import 'package:matrix/utils/duration_formatter.dart';
+import 'package:matrix/components/player/progress_bar.dart';
 import 'package:marquee/marquee.dart'; // Import marquee
 
 class ShowsMusicPlayerPage extends StatefulWidget {

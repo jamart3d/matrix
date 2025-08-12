@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'package:huntrix/models/show.dart';
-import 'package:huntrix/models/track.dart';
+import 'package:matrix/models/show.dart';
+import 'package:matrix/models/track.dart';
 import 'package:logger/logger.dart';
 
 final _logger = Logger();

@@ -2,15 +2,15 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:huntrix/helpers/shows_helper.dart';
-import 'package:huntrix/models/show.dart';
-import 'package:huntrix/models/track.dart';
-import 'package:huntrix/providers/album_settings_provider.dart';
-import 'package:huntrix/providers/track_player_provider.dart';
-import 'package:huntrix/utils/load_shows_data.dart';
-import 'package:huntrix/utils/duration_formatter.dart';
+import 'package:matrix/helpers/shows_helper.dart';
+import 'package:matrix/models/show.dart';
+import 'package:matrix/models/track.dart';
+import 'package:matrix/providers/album_settings_provider.dart';
+import 'package:matrix/providers/track_player_provider.dart';
+import 'package:matrix/utils/load_shows_data.dart';
+import 'package:matrix/utils/duration_formatter.dart';
 import 'package:provider/provider.dart';
-import 'package:huntrix/components/my_drawer.dart';
+import 'package:matrix/components/my_drawer.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:logger/logger.dart';
 import 'package:marquee/marquee.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:huntrix/utils/load_json_data.dart' as loader;
+import 'package:matrix/utils/load_json_data.dart' as loader;
 
 /// A singleton service to cache album data after it's loaded once.
 /// This prevents repeated file reads and parsing.

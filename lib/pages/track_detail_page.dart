@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:huntrix/utils/duration_formatter.dart';
-import 'package:huntrix/models/track.dart';
+import 'package:matrix/utils/duration_formatter.dart';
+import 'package:matrix/models/track.dart';
 
 class TrackDetailPage extends StatelessWidget {
   final Track track;

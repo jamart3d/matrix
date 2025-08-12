@@ -1,15 +1,15 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:huntrix/components/my_drawer.dart';
-import 'package:huntrix/helpers/album_helper.dart'; // <-- Import the refactored helper
-import 'package:huntrix/models/track.dart';
-import 'package:huntrix/pages/tv_album_detail_page.dart';
-import 'package:huntrix/providers/track_player_provider.dart';
+import 'package:matrix/components/my_drawer.dart';
+import 'package:matrix/helpers/album_helper.dart'; // <-- Import the refactored helper
+import 'package:matrix/models/track.dart';
+import 'package:matrix/pages/tv_album_detail_page.dart';
+import 'package:matrix/providers/track_player_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:huntrix/utils/load_json_data.dart';
-import 'package:huntrix/utils/album_utils.dart';
-import 'package:huntrix/providers/album_settings_provider.dart';
+import 'package:matrix/utils/load_json_data.dart';
+import 'package:matrix/utils/album_utils.dart';
+import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:logger/logger.dart';
 
 class AlbumsGridPage extends StatefulWidget {

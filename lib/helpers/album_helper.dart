@@ -1,8 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:huntrix/models/track.dart';
-import 'package:huntrix/providers/track_player_provider.dart';
-import 'package:huntrix/services/navigation_service.dart';
+import 'package:matrix/models/track.dart';
+import 'package:matrix/providers/track_player_provider.dart';
+import 'package:matrix/services/navigation_service.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 

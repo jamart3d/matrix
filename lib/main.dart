@@ -1,20 +1,20 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:huntrix/pages/albums_list_wheel_page.dart';
-import 'package:huntrix/pages/albums_page.dart';
-import 'package:huntrix/pages/music_player_page.dart';
-import 'package:huntrix/pages/settings_page.dart';
-import 'package:huntrix/pages/shows_page.dart';
-import 'package:huntrix/pages/track_playlist_page.dart';
-import 'package:huntrix/providers/track_player_provider.dart';
-import 'package:huntrix/pages/albums_grid_page.dart';
-import 'package:huntrix/providers/album_settings_provider.dart';
+import 'package:matrix/pages/albums_list_wheel_page.dart';
+import 'package:matrix/pages/albums_page.dart';
+import 'package:matrix/pages/music_player_page.dart';
+import 'package:matrix/pages/settings_page.dart';
+import 'package:matrix/pages/shows_page.dart';
+import 'package:matrix/pages/track_playlist_page.dart';
+import 'package:matrix/providers/track_player_provider.dart';
+import 'package:matrix/pages/albums_grid_page.dart';
+import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:huntrix/pages/shows_music_player_page.dart'; 
+import 'package:matrix/pages/shows_music_player_page.dart'; 
 
 
 // Import the encapsulated NavigationService
@@ -67,7 +67,7 @@ Future<void> main() async {
 /// Initializes just_audio_background for background audio controls.
 Future<void> _initializeAudioBackground() async {
   await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.huntrix.audio_channel',
+    androidNotificationChannelId: 'com.matrix.audio_channel',
     androidNotificationChannelName: 'HunTrix Audio Playback',
     androidNotificationOngoing: true,
     androidNotificationIcon: 'mipmap/ic_launcher',
