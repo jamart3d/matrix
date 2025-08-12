@@ -29,6 +29,9 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   String? _currentShowName;
   String? _currentSourceShnid;
 
+  // Tracks the uniqueId of the expanded show.
+  String? _expandedShowId;
+
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
 
@@ -41,7 +44,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     _logger.i("ShowsPage initState: Kicking off loadShowsData.");
     _showsFuture = loadShowsData(context);
   }
-  
+
   @override
   void dispose() {
     _logger.i("ShowsPage disposed.");
@@ -65,21 +68,21 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
 
     final newShowName = provider.currentAlbumTitle;
     final newShnid = provider.currentTrack?.shnid;
-    
+
     if (_currentShowName != newShowName) {
       _logger.d("Show name changed: '$_currentShowName' -> '$newShowName'");
-      
+
       setState(() {
         _currentShowName = newShowName;
         _currentSourceShnid = newShnid;
       });
-      
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _scrollToCurrentShow();
         }
       });
-      
+
     } else if (_currentSourceShnid != newShnid) {
       _logger.d("Source SHNID changed within the same show: '$_currentSourceShnid' -> '$newShnid'");
       setState(() {
@@ -92,7 +95,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     if (_currentShowName == null || !_itemScrollController.isAttached) {
       return;
     }
-    
+
     try {
       final shows = await _showsFuture;
       final sortOrder = context.read<AlbumSettingsProvider>().showSortOrder;
@@ -181,7 +184,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
         }
 
         final shows = snapshot.data!;
-        
+
         shows.sort((a, b) {
           if (settings.showSortOrder == ShowSortOrder.dateDescending) {
             return b.date.compareTo(a.date);
@@ -199,8 +202,8 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
               final show = shows[index];
               final bool isCurrentShow = _currentSourceShnid != null && show.sources.containsKey(_currentSourceShnid);
               final titleStyle = TextStyle(
-                  color: isCurrentShow ? Colors.yellow : Colors.white,
-                  fontWeight: FontWeight.bold,
+                color: isCurrentShow ? Colors.yellow : Colors.white,
+                fontWeight: FontWeight.bold,
               );
 
               List<Widget> children;
@@ -223,7 +226,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
                   );
                 }).toList();
               }
-              
+
               return GestureDetector(
                 onLongPress: () async {
                   await playerProvider.clearPlaylist();
@@ -236,16 +239,30 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
                   color: isCurrentShow ? Colors.yellow.withOpacity(0.2) : Colors.black.withOpacity(0.4),
                   margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                   child: ExpansionTile(
+                    key: Key(show.uniqueId), // Ensures state is handled correctly on rebuild
+                    initiallyExpanded: settings.singleExpansion && _expandedShowId == show.uniqueId,
+                    onExpansionChanged: (isExpanding) {
+                      if (settings.singleExpansion) {
+                        setState(() {
+                          if (isExpanding) {
+                            _expandedShowId = show.uniqueId;
+                          } else if (_expandedShowId == show.uniqueId) {
+                            // This tile was the one expanded, and it's being collapsed
+                            _expandedShowId = null;
+                          }
+                        });
+                      }
+                    },
                     title: (settings.marqueeTitles)
-                      ? SizedBox(
-                          height: 20,
-                          child: Marquee(text: show.displayName, style: titleStyle, velocity: 50.0, blankSpace: 30, pauseAfterRound: const Duration(seconds: 1)),
-                        )
-                      : Text(show.displayName, style: titleStyle, overflow: TextOverflow.ellipsis),
+                        ? SizedBox(
+                      height: 20,
+                      child: Marquee(text: show.venue, style: titleStyle, velocity: 50.0, blankSpace: 30, pauseAfterRound: const Duration(seconds: 1)),
+                    )
+                        : Text(show.venue, style: titleStyle, overflow: TextOverflow.ellipsis),
                     subtitle: Text(
                       show.sourceCount > 1
-                        ? "${show.artist} (${show.sourceCount} sources)"
-                        : show.artist,
+                          ? "${show.date} (${show.sourceCount} sources)"
+                          : show.date,
                       style: TextStyle(color: isCurrentShow ? Colors.yellow.withOpacity(0.8) : Colors.grey.shade300),
                     ),
                     iconColor: isCurrentShow ? Colors.yellow : Colors.white,
@@ -289,7 +306,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
       ),
     );
   }
-  
+
   Widget? _buildFloatingActionButton() {
     final playerProvider = context.watch<TrackPlayerProvider>();
 

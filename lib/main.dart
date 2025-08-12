@@ -61,7 +61,7 @@ Future<void> main() async {
   }
   
   // 6. Run the app, passing in the determined initialRoute.
-  runApp(HunTrix(initialRoute: initialRoute));
+  runApp(Matrix(initialRoute: initialRoute));
 }
 
 /// Initializes just_audio_background for background audio controls.
@@ -81,10 +81,10 @@ Future<void> _configureAudioSession() async {
   await session.configure(const AudioSessionConfiguration.music());
 }
 
-class HunTrix extends StatelessWidget {
+class Matrix extends StatelessWidget {
   // Accept the initialRoute as a constructor parameter.
   final String initialRoute;
-  const HunTrix({super.key, required this.initialRoute});
+  const Matrix({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +96,7 @@ class HunTrix extends StatelessWidget {
       child: MaterialApp(
         navigatorKey: NavigationService().navigatorKey, 
         debugShowCheckedModeBanner: false,
-        title: 'HunTrix',
+        title: 'Matrix',
         theme: _buildTheme(),
         // Use the initialRoute that was determined in main() and passed here.
         initialRoute: initialRoute,

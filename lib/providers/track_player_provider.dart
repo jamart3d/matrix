@@ -17,6 +17,33 @@ import 'package:path/path.dart' as p;
 class TrackPlayerProvider extends ChangeNotifier {
   final AudioPlayer audioPlayer = AudioPlayer();
   final Logger logger = Logger();
+  Stream<Duration> get bufferedPositionStream => audioPlayer.bufferedPositionStream;
+  Stream<ProcessingState> get processingStateStream => audioPlayer.processingStateStream;
+
+  // Helper method to get current buffer health percentage
+  double getCurrentBufferHealth() {
+    final duration = audioPlayer.duration;
+    final position = audioPlayer.position;
+    final buffered = audioPlayer.bufferedPosition;
+
+    if (duration == null || position == null) return 0.0;
+
+    final remainingDuration = duration - position;
+    final availableBuffer = buffered - position;
+
+    if (remainingDuration.inMilliseconds <= 0) return 100.0;
+    if (availableBuffer.inMilliseconds <= 0) return 0.0;
+
+    return (availableBuffer.inMilliseconds / remainingDuration.inMilliseconds * 100)
+        .clamp(0.0, 100.0);
+  }
+
+  // Optional: Method to get buffered position at current moment
+  Duration get currentBufferedPosition => audioPlayer.bufferedPosition;
+
+  // Optional: Check if currently buffering
+  bool get isBuffering => audioPlayer.processingState == ProcessingState.buffering ||
+      audioPlayer.processingState == ProcessingState.loading;
 
   ConcatenatingAudioSource? _concatenatingAudioSource;
   int _currentIndex = 0;

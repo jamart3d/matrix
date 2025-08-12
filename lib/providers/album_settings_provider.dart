@@ -3,99 +3,103 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Preference Keys
+const String PREF_SKIP_SHOWS_PAGE = 'skipShowsPage';
+const String PREF_MARQUEE_TITLES = 'marqueeTitles';
+const String PREF_SHOW_SORT_ORDER = 'showSortOrder';
+const String PREF_MARQUEE_PLAYER_TITLE = 'marqueePlayerTitle';
+const String PREF_DISPLAY_ALBUM_RELEASE_NUMBER = 'displayAlbumReleaseNumber';
+const String PREF_SINGLE_EXPANSION = 'singleExpansion';
+const String PREF_SHOW_BUFFER_INFO = 'showBufferInfo'; // NEW KEY
+
 enum ShowSortOrder { dateDescending, dateAscending }
 
-class AlbumSettingsProvider extends ChangeNotifier {
-  // Define unique keys for storing all settings
-  static const String _displayOrderKey = 'displayAlbumReleaseNumber';
-  static const String _skipShowsPageKey = 'skipShowsPage';
-  static const String _marqueeTitlesKey = 'marqueeTitles';
-  static const String _showSortOrderKey = 'showSortOrder';
-  static const String _marqueePlayerTitleKey = 'marqueePlayerTitle';
-
-  // --- Setting 1: Display Release Order (Albums) ---
-  bool _displayAlbumReleaseNumber = false;
-  bool get displayAlbumReleaseNumber => _displayAlbumReleaseNumber;
-
-  // --- Setting 2: Skip Shows Page ---
+class AlbumSettingsProvider with ChangeNotifier {
+  // Private backing fields
   bool _skipShowsPage = false;
+  bool _marqueeTitles = true;
+  ShowSortOrder _showSortOrder = ShowSortOrder.dateDescending;
+  bool _marqueePlayerTitle = true;
+  bool _displayAlbumReleaseNumber = true;
+  bool _singleExpansion = false;
+  bool _showBufferInfo = false; // NEW PROPERTY
+
+  // Public getters
   bool get skipShowsPage => _skipShowsPage;
-
-  // --- Setting 3: Marquee Titles (Shows Page List) ---
-  bool _marqueeTitles = false; // Default to false
   bool get marqueeTitles => _marqueeTitles;
-
-  // --- Setting 4: Show Sort Order ---
-  ShowSortOrder _showSortOrder = ShowSortOrder.dateAscending; // Default to oldest first
   ShowSortOrder get showSortOrder => _showSortOrder;
-
-  // --- Setting 5: Marquee Player Title ---
-  bool _marqueePlayerTitle = true; // Default to true
   bool get marqueePlayerTitle => _marqueePlayerTitle;
+  bool get displayAlbumReleaseNumber => _displayAlbumReleaseNumber;
+  bool get singleExpansion => _singleExpansion;
+  bool get showBufferInfo => _showBufferInfo; // NEW GETTER
 
   AlbumSettingsProvider() {
     _loadSettings();
   }
 
+  // Load all settings from SharedPreferences
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    
-    _displayAlbumReleaseNumber = prefs.getBool(_displayOrderKey) ?? false;
-    _skipShowsPage = prefs.getBool(_skipShowsPageKey) ?? false;
-    _marqueeTitles = prefs.getBool(_marqueeTitlesKey) ?? false; 
-    _marqueePlayerTitle = prefs.getBool(_marqueePlayerTitleKey) ?? true;
 
-    final savedSortOrder = prefs.getString(_showSortOrderKey);
-    if (savedSortOrder == ShowSortOrder.dateDescending.toString()) {
-      _showSortOrder = ShowSortOrder.dateDescending;
-    } else {
-      _showSortOrder = ShowSortOrder.dateAscending;
-    }
-    
+    _skipShowsPage = prefs.getBool(PREF_SKIP_SHOWS_PAGE) ?? false;
+    _marqueeTitles = prefs.getBool(PREF_MARQUEE_TITLES) ?? true;
+    _showSortOrder = ShowSortOrder.values[prefs.getInt(PREF_SHOW_SORT_ORDER) ?? 0];
+    _marqueePlayerTitle = prefs.getBool(PREF_MARQUEE_PLAYER_TITLE) ?? true;
+    _displayAlbumReleaseNumber = prefs.getBool(PREF_DISPLAY_ALBUM_RELEASE_NUMBER) ?? true;
+    _singleExpansion = prefs.getBool(PREF_SINGLE_EXPANSION) ?? false;
+    _showBufferInfo = prefs.getBool(PREF_SHOW_BUFFER_INFO) ?? false; // LOAD NEW SETTING
+
     notifyListeners();
   }
 
-  Future<void> setDisplayAlbumReleaseNumber(bool value) async {
-    if (_displayAlbumReleaseNumber == value) return;
-    _displayAlbumReleaseNumber = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_displayOrderKey, value);
-    notifyListeners();
-  }
-
-  void toggleDisplayAlbumReleaseNumber() {
-    setDisplayAlbumReleaseNumber(!_displayAlbumReleaseNumber);
-  }
-  
+  // Setters that update state and persist to SharedPreferences
   Future<void> setSkipShowsPage(bool value) async {
-    if (_skipShowsPage == value) return;
     _skipShowsPage = value;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_skipShowsPageKey, value);
+    await prefs.setBool(PREF_SKIP_SHOWS_PAGE, value);
     notifyListeners();
   }
-  
+
   Future<void> setMarqueeTitles(bool value) async {
-    if (_marqueeTitles == value) return;
     _marqueeTitles = value;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_marqueeTitlesKey, value);
+    await prefs.setBool(PREF_MARQUEE_TITLES, value);
     notifyListeners();
   }
 
   Future<void> setShowSortOrder(ShowSortOrder value) async {
-    if (_showSortOrder == value) return;
     _showSortOrder = value;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_showSortOrderKey, value.toString());
+    await prefs.setInt(PREF_SHOW_SORT_ORDER, value.index);
     notifyListeners();
   }
-  
+
   Future<void> setMarqueePlayerTitle(bool value) async {
-    if (_marqueePlayerTitle == value) return;
     _marqueePlayerTitle = value;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_marqueePlayerTitleKey, value);
+    await prefs.setBool(PREF_MARQUEE_PLAYER_TITLE, value);
+    notifyListeners();
+  }
+
+  Future<void> setDisplayAlbumReleaseNumber(bool value) async {
+    _displayAlbumReleaseNumber = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(PREF_DISPLAY_ALBUM_RELEASE_NUMBER, value);
+    notifyListeners();
+  }
+
+  Future<void> setSingleExpansion(bool value) async {
+    _singleExpansion = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(PREF_SINGLE_EXPANSION, value);
+    notifyListeners();
+  }
+
+  // NEW SETTER
+  Future<void> setShowBufferInfo(bool value) async {
+    _showBufferInfo = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(PREF_SHOW_BUFFER_INFO, value);
     notifyListeners();
   }
 }

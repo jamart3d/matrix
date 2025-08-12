@@ -48,13 +48,21 @@ class SettingsPage extends StatelessWidget {
                 activeColor: Colors.yellow,
                 secondary: const Icon(Icons.text_fields, color: Colors.white70),
               ),
+              SwitchListTile(
+                title: const Text('Single Expanded Item', style: titleStyle),
+                subtitle: Text('Only allow one show to be expanded at a time.', style: subtitleStyle),
+                value: settingsProvider.singleExpansion,
+                onChanged: (bool value) => settingsProvider.setSingleExpansion(value),
+                activeColor: Colors.yellow,
+                secondary: const Icon(Icons.playlist_add_check, color: Colors.white70),
+              ),
               ListTile(
                 leading: const Icon(Icons.sort_by_alpha, color: Colors.white70),
                 title: const Text('Default Show Sort Order', style: titleStyle),
                 subtitle: Text(
                   settingsProvider.showSortOrder == ShowSortOrder.dateDescending
-                    ? 'Newest First'
-                    : 'Oldest First',
+                      ? 'Newest First'
+                      : 'Oldest First',
                   style: subtitleStyle,
                 ),
                 trailing: PopupMenuButton<ShowSortOrder>(

@@ -9,7 +9,8 @@ import 'package:matrix/pages/album_detail_page.dart';
 // import 'package:matrix/pages/albums_grid_page.dart'; // Commented out as per request
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:matrix/services/album_data_service.dart';
+// --- FIX: Added 'hide' to resolve the import conflict ---
+import 'package:matrix/services/album_data_service.dart' hide AlbumSettingsProvider;
 import 'package:matrix/utils/album_utils.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
@@ -46,7 +47,7 @@ class _AlbumsPageState extends State<AlbumsPage>
   // Controllers
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
-      ItemPositionsListener.create();
+  ItemPositionsListener.create();
 
   @override
   bool get wantKeepAlive => true;
@@ -104,7 +105,9 @@ class _AlbumsPageState extends State<AlbumsPage>
   Future<void> _loadData() async {
     try {
       _logger.i('Loading and caching album data...');
-      await AlbumDataService().loadAndCacheAlbumData(context, (albumData) {
+      // --- FIX: Instantiate the service first to avoid compiler errors ---
+      final albumService = AlbumDataService();
+      await albumService.loadAndCacheAlbumData(context, (albumData) {
         if (mounted) {
           setState(() {
             _cachedAlbumData = albumData;
@@ -199,19 +202,6 @@ class _AlbumsPageState extends State<AlbumsPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
-    /*
-    // LOGIC TO SWITCH TO GRID VIEW ON WIDER SCREENS - COMMENTED OUT AS REQUESTED
-    if (MediaQuery.of(context).size.width > 600) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AlbumsGridPage()),
-        );
-      });
-      return const SizedBox.shrink();
-    }
-    */
 
     return Scaffold(
       appBar: _buildAppBar(),
@@ -225,7 +215,7 @@ class _AlbumsPageState extends State<AlbumsPage>
     return AppBar(
       centerTitle: true,
       backgroundColor: Colors.black,
-      title: const Text("Select a random matix -->"),
+      title: const Text("Select a random matrix -->"),
       actions: [
         IconButton(
           icon: const Icon(Icons.question_mark),
