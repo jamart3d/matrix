@@ -1,19 +1,22 @@
 // lib/models/track.dart
 
+import 'package:flutter/foundation.dart';
+
+@immutable // Annotation to enforce immutability
 class Track {
   final String albumName;
   final String? artistName;
   final String trackArtistName;
   final int trackDuration;
   final String trackName;
-  String trackNumber;
+  final String trackNumber; // Made final
   final String url;
-  String? albumArt;
+  final String? albumArt; // Made final
   final int? albumReleaseNumber;
   final String? albumReleaseDate;
   final String? shnid;
 
-  Track({
+  const Track({ // Made constructor const
     required this.albumName,
     this.artistName,
     required this.trackArtistName,
@@ -33,7 +36,8 @@ class Track {
   }
 
   /// Original constructor for `data.json`.
-  factory Track.fromJson(Map<String, dynamic> json) {
+  /// **IMPROVEMENT**: Now accepts an optional `shnid` to be passed in.
+  factory Track.fromJson(Map<String, dynamic> json, {String? shnid}) {
     return Track(
       albumName: json['albumName'] as String? ?? '',
       artistName: json['artistName'] as String?,
@@ -45,17 +49,18 @@ class Track {
       albumArt: json['albumArt'] as String?,
       albumReleaseNumber: _parseIntSafely(json['albumReleaseNumber']),
       albumReleaseDate: json['albumReleaseDate'] as String?,
+      shnid: shnid, // Use the passed-in shnid
     );
   }
 
   /// Constructor for compact data from `archive_tracks_...json` (ShowsPage).
   factory Track.fromJsonCompact(
-    Map<String, dynamic> json, {
-    required String albumName,
-    required String artistName,
-    required int trackIndex,
-    required String shnid,
-  }) {
+      Map<String, dynamic> json, {
+        required String albumName,
+        required String artistName,
+        required int trackIndex,
+        required String shnid,
+      }) {
     return Track(
       albumName: albumName,
       artistName: artistName,
@@ -67,8 +72,7 @@ class Track {
       shnid: shnid,
     );
   }
-  
-  // --- NEW, CORRECTED FACTORY FOR data_opt.json ---
+
   /// Creates a Track from the compact format found in `data_opt.json`.
   factory Track.fromAlbumOptJson({
     required Map<String, dynamic> json,
@@ -83,11 +87,11 @@ class Track {
       trackArtistName: artistName,
       trackDuration: _parseIntSafely(json['d']) ?? 0,
       trackName: json['t'] as String? ?? 'Unknown Track',
-      trackNumber: (json['n'] as num? ?? 0).toString(), // Uses the 'n' key
+      trackNumber: (json['n'] as num? ?? 0).toString(),
       url: json['u'] as String? ?? '',
       albumReleaseNumber: albumReleaseNumber,
       albumReleaseDate: albumReleaseDate,
-      shnid: null, // This data source has no shnid
+      shnid: null,
     );
   }
 
@@ -106,7 +110,7 @@ class Track {
       'shnid': shnid,
     };
   }
-  
+
   Track copyWith({
     String? albumName,
     String? artistName,
@@ -115,10 +119,11 @@ class Track {
     String? trackName,
     String? trackNumber,
     String? url,
-    String? albumArt,
+    // Use ValueGetter to distinguish between null and not provided
+    ValueGetter<String?>? albumArt,
     int? albumReleaseNumber,
     String? albumReleaseDate,
-    String? shnid,
+    ValueGetter<String?>? shnid,
   }) {
     return Track(
       albumName: albumName ?? this.albumName,
@@ -128,10 +133,10 @@ class Track {
       trackName: trackName ?? this.trackName,
       trackNumber: trackNumber ?? this.trackNumber,
       url: url ?? this.url,
-      albumArt: albumArt ?? this.albumArt,
+      albumArt: albumArt != null ? albumArt() : this.albumArt,
       albumReleaseNumber: albumReleaseNumber ?? this.albumReleaseNumber,
       albumReleaseDate: albumReleaseDate ?? this.albumReleaseDate,
-      shnid: shnid ?? this.shnid,
+      shnid: shnid != null ? shnid() : this.shnid,
     );
   }
 
@@ -157,15 +162,12 @@ class Track {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is Track &&
-        other.albumName == albumName &&
-        other.trackName == trackName &&
-        other.trackArtistName == trackArtistName &&
         other.url == url &&
         other.shnid == shnid;
   }
 
   @override
   int get hashCode {
-    return Object.hash(albumName, trackName, trackArtistName, url, shnid);
+    return Object.hash(url, shnid);
   }
 }

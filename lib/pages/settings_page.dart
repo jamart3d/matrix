@@ -12,6 +12,8 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     const titleStyle = TextStyle(color: Colors.white);
     final subtitleStyle = TextStyle(color: Colors.grey.shade400);
+    const headerStyle = TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold);
+    const iconColor = Colors.white70;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -21,53 +23,56 @@ class SettingsPage extends StatelessWidget {
         title: const Text('Settings'),
       ),
       body: Consumer<AlbumSettingsProvider>(
-        builder: (context, settingsProvider, child) {
+        builder: (context, settings, child) {
           return ListView(
             children: <Widget>[
-              const ListTile(
-                title: Text("General", style: TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold)),
-              ),
+              const ListTile(title: Text("General", style: headerStyle)),
               SwitchListTile(
                 title: const Text('Skip Shows Page on Startup', style: titleStyle),
-                subtitle: Text('Go directly to the albums list.', style: subtitleStyle),
-                value: settingsProvider.skipShowsPage,
-                onChanged: (bool value) => settingsProvider.setSkipShowsPage(value),
-                activeColor: Colors.yellow,
-                secondary: const Icon(Icons.fast_forward, color: Colors.white70),
+                value: settings.skipShowsPage,
+                onChanged: settings.setSkipShowsPage,
+                secondary: const Icon(Icons.fast_forward, color: iconColor),
               ),
               const Divider(color: Colors.white24),
 
-              const ListTile(
-                title: Text("Shows Page", style: TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold)),
-              ),
+              const ListTile(title: Text("Shows Page", style: headerStyle)),
+              // ... (Shows Page settings are unchanged) ...
               SwitchListTile(
                 title: const Text('Scrolling Show List Titles', style: titleStyle),
-                subtitle: Text('Scroll long titles that don\'t fit in the list.', style: subtitleStyle),
-                value: settingsProvider.marqueeTitles,
-                onChanged: (bool value) => settingsProvider.setMarqueeTitles(value),
+                subtitle: Text('Scroll long titles that don\'t fit.', style: subtitleStyle),
+                value: settings.marqueeTitles,
+                onChanged: (bool value) => settings.setMarqueeTitles(value),
                 activeColor: Colors.yellow,
                 secondary: const Icon(Icons.text_fields, color: Colors.white70),
               ),
               SwitchListTile(
                 title: const Text('Single Expanded Item', style: titleStyle),
                 subtitle: Text('Only allow one show to be expanded at a time.', style: subtitleStyle),
-                value: settingsProvider.singleExpansion,
-                onChanged: (bool value) => settingsProvider.setSingleExpansion(value),
+                value: settings.singleExpansion,
+                onChanged: (bool value) => settings.setSingleExpansion(value),
                 activeColor: Colors.yellow,
                 secondary: const Icon(Icons.playlist_add_check, color: Colors.white70),
+              ),
+              SwitchListTile(
+                title: const Text('Show Year Scrollbar', style: titleStyle),
+                subtitle: Text('Display year indicator while scrolling shows.', style: subtitleStyle),
+                value: settings.showYearScrollbar,
+                onChanged: (bool value) => settings.setShowYearScrollbar(value),
+                activeColor: Colors.yellow,
+                secondary: const Icon(Icons.timeline, color: Colors.white70),
               ),
               ListTile(
                 leading: const Icon(Icons.sort_by_alpha, color: Colors.white70),
                 title: const Text('Default Show Sort Order', style: titleStyle),
                 subtitle: Text(
-                  settingsProvider.showSortOrder == ShowSortOrder.dateDescending
+                  settings.showSortOrder == ShowSortOrder.dateDescending
                       ? 'Newest First'
                       : 'Oldest First',
                   style: subtitleStyle,
                 ),
                 trailing: PopupMenuButton<ShowSortOrder>(
                   onSelected: (ShowSortOrder result) {
-                    settingsProvider.setShowSortOrder(result);
+                    settings.setShowSortOrder(result);
                   },
                   itemBuilder: (BuildContext context) => <PopupMenuEntry<ShowSortOrder>>[
                     const PopupMenuItem<ShowSortOrder>(
@@ -82,42 +87,60 @@ class SettingsPage extends StatelessWidget {
                   icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
                 ),
               ),
+
               const Divider(color: Colors.white24),
 
-              const ListTile(
-                title: Text("Player Page", style: TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold)),
-              ),
+              const ListTile(title: Text("Player Page", style: headerStyle)),
               SwitchListTile(
                 title: const Text('Scrolling Player Title', style: titleStyle),
-                subtitle: Text('Scroll long titles in the player app bar.', style: subtitleStyle),
-                value: settingsProvider.marqueePlayerTitle,
-                onChanged: (bool value) => settingsProvider.setMarqueePlayerTitle(value),
+                value: settings.marqueePlayerTitle,
+                onChanged: settings.setMarqueePlayerTitle,
+                secondary: const Icon(Icons.text_format, color: iconColor),
+              ),
+              // --- SWITCHLISTTILE RESTORED ---
+              SwitchListTile(
+                title: const Text('Show Buffer Info (Debug)', style: titleStyle),
+                subtitle: Text('Displays buffer health in the player.', style: subtitleStyle),
+                value: settings.showBufferInfo,
+                onChanged: settings.setShowBufferInfo,
                 activeColor: Colors.yellow,
-                secondary: const Icon(Icons.text_format, color: Colors.white70),
+                secondary: const Icon(Icons.science, color: iconColor),
               ),
               const Divider(color: Colors.white24),
 
-              const ListTile(
-                title: Text("Albums Page", style: TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold)),
-              ),
+              const ListTile(title: Text("Albums Page", style: headerStyle)),
               SwitchListTile(
                 title: const Text("Display release order number", style: titleStyle),
-                subtitle: Text("Shows the # next to each album.", style: subtitleStyle),
-                value: settingsProvider.displayAlbumReleaseNumber,
-                onChanged: (newValue) => settingsProvider.setDisplayAlbumReleaseNumber(newValue),
-                activeColor: Colors.yellow,
-                secondary: const Icon(Icons.format_list_numbered, color: Colors.white70),
+                value: settings.displayAlbumReleaseNumber,
+                onChanged: settings.setDisplayAlbumReleaseNumber,
+                secondary: const Icon(Icons.format_list_numbered, color: iconColor),
               ),
               const Divider(color: Colors.white24),
 
+              const ListTile(title: Text("Matrix Rain", style: headerStyle)),
               ListTile(
-                leading: const Icon(Icons.info_outline, color: Colors.white70),
+                leading: const Icon(Icons.speed, color: iconColor),
+                title: const Text('Rain Density', style: titleStyle),
+                subtitle: Text('Controls how frequently new text columns appear.', style: subtitleStyle),
+              ),
+              Slider(
+                value: settings.matrixRainSpeed,
+                min: 1.0,
+                max: 10.0,
+                divisions: 9,
+                label: settings.matrixRainSpeed.round().toString(),
+                activeColor: Colors.yellow,
+                inactiveColor: Colors.grey,
+                onChanged: settings.setMatrixRainSpeed,
+              ),
+              const Divider(color: Colors.white24),
+
+              const ListTile(title: Text("Extras", style: headerStyle)),
+              ListTile(
+                leading: const Icon(Icons.info_outline, color: iconColor),
                 title: const Text("About", style: titleStyle),
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AboutPage()),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const AboutPage()));
                 },
               ),
             ],

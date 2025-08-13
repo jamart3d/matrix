@@ -1,15 +1,17 @@
+// lib/pages/album_list_wheel_page.dart
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:matrix/components/my_drawer.dart';
 import 'package:matrix/helpers/album_helper.dart';
+import 'package:matrix/models/album.dart'; // Using the type-safe model
 import 'package:matrix/models/track.dart';
 import 'package:matrix/pages/album_detail_page.dart';
-import 'package:matrix/providers/track_player_provider.dart';
-import 'package:matrix/utils/album_utils.dart';
-import 'package:provider/provider.dart';
-import 'package:matrix/utils/load_json_data.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
+import 'package:matrix/providers/track_player_provider.dart';
+import 'package:matrix/services/album_data_service.dart';
+import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 
 class AlbumListWheelPage extends StatefulWidget {
@@ -21,12 +23,13 @@ class AlbumListWheelPage extends StatefulWidget {
 
 class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
   final _logger = Logger(printer: PrettyPrinter(methodCount: 1));
-  
+
+  // --- IMPROVEMENT: State is now driven by a Future ---
+  late final Future<void> _initializationFuture;
+
   // State variables
-  List<Map<String, dynamic>>? _cachedAlbumData;
   String _currentAlbumArt = 'assets/images/t_steal.webp';
   String? _currentAlbumName;
-  bool _isDataLoading = true;
 
   // Controllers
   late final FixedExtentScrollController _scrollController;
@@ -35,7 +38,8 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
   void initState() {
     super.initState();
     _scrollController = FixedExtentScrollController();
-    _initializePage();
+    // Start the data loading process, UI will react via FutureBuilder
+    _initializationFuture = AlbumDataService().init();
   }
 
   @override
@@ -44,130 +48,105 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     super.dispose();
   }
 
-  Future<void> _initializePage() async {
-    await _loadAlbumData();
-    _setupInitialAlbumScroll();
-  }
-
-  Future<void> _loadAlbumData() async {
-    try {
-      _logger.i("Loading album data for list wheel...");
-      await loadData(context, (albumData) {
-        if (mounted) {
-          setState(() {
-            _cachedAlbumData = albumData;
-            _isDataLoading = false;
-          });
-          if (albumData != null) {
-            preloadAlbumImages(albumData, context);
-          }
-        }
-      });
-    } catch (e) {
-      if(mounted) {
-        setState(() => _isDataLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Error loading album data."), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  void _setupInitialAlbumScroll() {
+  // This method is now called *after* the FutureBuilder has successfully loaded the data.
+  void _setupInitialAlbumScroll(List<Album> albums) {
     if (!mounted) return;
-    final currentlyPlaying = context.read<TrackPlayerProvider>().currentTrack ;
+
+    // Set initial scroll position based on the currently playing track
+    final currentlyPlaying = context.read<TrackPlayerProvider>().currentTrack;
     if (currentlyPlaying != null) {
-      _updateCurrentAlbum(currentlyPlaying);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrentAlbum(animate: false));
+      final initialIndex = albums.indexWhere((album) => album.name == currentlyPlaying.albumName);
+      if (initialIndex != -1) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpToItem(initialIndex);
+          }
+        });
+      }
     }
   }
 
   void _updateCurrentAlbum(Track? currentlyPlayingSong) {
     if (currentlyPlayingSong == null) {
-      // Handle player stopping
       if (_currentAlbumName != null) {
-        setState(() {
-          _currentAlbumName = null;
-          _currentAlbumArt = 'assets/images/t_steal.webp';
-        });
+        setState(() => _currentAlbumName = null);
       }
       return;
     }
-    
-    final newAlbumArt = currentlyPlayingSong.albumArt ?? 'assets/images/t_steal.webp';
+
     final newAlbumName = currentlyPlayingSong.albumName;
-    
-    if (newAlbumArt != _currentAlbumArt || newAlbumName != _currentAlbumName) {
+    if (newAlbumName != _currentAlbumName) {
       _logger.d("Provider changed album. Updating wheel UI for: $newAlbumName");
-      if(mounted) {
+      if (mounted) {
         setState(() {
-          _currentAlbumArt = newAlbumArt;
+          // Get the art directly from the provider, which has the correct logic
+          _currentAlbumArt = context.read<TrackPlayerProvider>().currentAlbumArt;
           _currentAlbumName = newAlbumName;
         });
-        _scrollToCurrentAlbum(animate: true);
+        _scrollToCurrentAlbum();
       }
     }
   }
 
-  void _scrollToCurrentAlbum({bool animate = true}) {
-    if (_currentAlbumName == null || _cachedAlbumData == null || !_scrollController.hasClients) return;
-    
-    final index = _cachedAlbumData!.indexWhere((album) => album['album'] == _currentAlbumName);
-    if (index != -1) {
-      if (animate) {
-        _scrollController.animateToItem(
-          index,
-          duration: const Duration(milliseconds: 700),
-          curve: Curves.easeInOut,
-        );
-      } else {
-        _scrollController.jumpToItem(index);
-      }
+  void _scrollToCurrentAlbum() {
+    if (_currentAlbumName == null || !_scrollController.hasClients) return;
+
+    final albums = AlbumDataService().albums;
+    final index = albums.indexWhere((album) => album.name == _currentAlbumName);
+
+    if (index != -1 && _scrollController.selectedItem != index) {
+      _scrollController.animateToItem(
+        index,
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen to the provider to update the background art in real-time
-    final currentlyPlaying = context.watch<TrackPlayerProvider>().currentTrack ;
+    // Listen for player changes to update the background and selected item
+    final currentlyPlaying = context.watch<TrackPlayerProvider>().currentTrack;
     _updateCurrentAlbum(currentlyPlaying);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text("Hunter's Matrix"),
-        centerTitle: true,
-        forceMaterialTransparency: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.question_mark),
-            onPressed: () {
-              if (_cachedAlbumData != null) {
-                playRandomAlbum(_cachedAlbumData!);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please wait for albums to load')),
-                );
-              }
-            },
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(),
       drawer: const MyDrawer(),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
             image: AssetImage(_currentAlbumArt),
             fit: BoxFit.cover,
+            onError: (e,s) => setState(() => _currentAlbumArt = 'assets/images/t_steal.webp'),
           ),
         ),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             color: Colors.black.withOpacity(0.5),
-            child: _buildBody(),
+            // --- IMPROVEMENT: FutureBuilder drives the main content ---
+            child: FutureBuilder<void>(
+              future: _initializationFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                // Data is loaded, get it from the service
+                final albums = AlbumDataService().albums;
+                _setupInitialAlbumScroll(albums);
+
+                if (albums.isEmpty) {
+                  return const Center(child: Text("No albums available."));
+                }
+
+                return _buildAlbumWheel(albums);
+              },
+            ),
           ),
         ),
       ),
@@ -175,17 +154,32 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     );
   }
 
-  Widget _buildBody() {
-    if (_isDataLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_cachedAlbumData == null || _cachedAlbumData!.isEmpty) {
-      return const Center(child: Text("No albums available."));
-    }
-    return _buildAlbumWheel();
+  AppBar _buildAppBar() {
+    return AppBar(
+      title: const Text("Hunter's Matrix"),
+      centerTitle: true,
+      forceMaterialTransparency: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.question_mark),
+          onPressed: () {
+            // Check if service is initialized before using its data
+            if (AlbumDataService().albums.isNotEmpty) {
+              playRandomAlbum(AlbumDataService().albums);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please wait for albums to load')),
+              );
+            }
+          },
+        ),
+      ],
+    );
   }
 
-  Widget _buildAlbumWheel() {
+  Widget _buildAlbumWheel(List<Album> albums) {
     final albumSettings = context.watch<AlbumSettingsProvider>();
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -208,26 +202,22 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
             physics: const FixedExtentScrollPhysics(),
             onSelectedItemChanged: (index) => HapticFeedback.mediumImpact(),
             childDelegate: ListWheelChildBuilderDelegate(
-              childCount: _cachedAlbumData!.length,
+              childCount: albums.length,
               builder: (context, index) {
-                final albumData = _cachedAlbumData![index];
-                final tracks = albumData['songs'] as List<Track>;
-
+                final album = albums[index];
                 return GestureDetector(
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => AlbumDetailPage(
-                        tracks: tracks,
-                        albumArt: albumData['albumArt'] as String,
-                        albumName: albumData['album'] as String,
+                        tracks: album.tracks,
+                        albumArt: album.albumArt,
+                        albumName: album.name,
                       ),
                     ),
                   ),
-                  onLongPress: () {
-                    playAlbumFromTracks(tracks);
-                  },
-                  child: _buildWheelItem(albumData, albumSettings, itemExtent),
+                  onLongPress: () => playAlbumFromTracks(album.tracks),
+                  child: _buildWheelItem(album, albumSettings, itemExtent),
                 );
               },
             ),
@@ -237,11 +227,8 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     );
   }
 
-  Widget _buildWheelItem(Map<String, dynamic> albumData, AlbumSettingsProvider settings, double itemExtent) {
-    final albumName = albumData['album'] as String;
-    final albumArt = albumData['albumArt'] as String;
-    final index = _cachedAlbumData!.indexOf(albumData);
-    final isSelected = _currentAlbumName == albumName;
+  Widget _buildWheelItem(Album album, AlbumSettingsProvider settings, double itemExtent) {
+    final isSelected = _currentAlbumName == album.name;
 
     return Container(
       width: itemExtent * 0.9,
@@ -261,8 +248,8 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(albumArt, fit: BoxFit.cover, gaplessPlayback: true),
-            if (index == 104) // Offline album indicator
+            Image.asset(album.albumArt, fit: BoxFit.cover, gaplessPlayback: true),
+            if (album.releaseNumber == 105)
               const Positioned(
                 bottom: 8,
                 right: 8,
@@ -272,6 +259,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
               Align(
                 alignment: Alignment.bottomLeft,
                 child: Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
@@ -285,7 +273,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${index + 1}. ${formatAlbumName(albumName)}',
+                        '${album.releaseNumber}. ${formatAlbumName(album.name)}',
                         style: TextStyle(
                           color: isSelected ? Colors.yellow : Colors.white,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -294,8 +282,8 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
                         ),
                       ),
                       Text(
-                        extractDateFromAlbumName(albumName),
-                         style: TextStyle(
+                        extractDateFromAlbumName(album.name),
+                        style: TextStyle(
                           color: isSelected ? Colors.yellow.withOpacity(0.8) : Colors.white70,
                           fontSize: 12,
                           shadows: const [Shadow(color: Colors.black, blurRadius: 2)],
@@ -311,33 +299,26 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     );
   }
 
-  /// **MODIFIED FAB**
-  /// This FAB now shows a loading indicator when the player is buffering.
   Widget? _buildFloatingActionButton() {
     final playerProvider = context.watch<TrackPlayerProvider>();
 
-    // Case 1: Player is actively loading or buffering a track.
     if (playerProvider.isLoading) {
       return FloatingActionButton(
-        onPressed: null, // Disable press action while loading
+        onPressed: null,
         backgroundColor: Colors.transparent,
         elevation: 0,
         child: const SizedBox(
           width: 50,
           height: 50,
-          child: CircularProgressIndicator(
-            strokeWidth: 3.0,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
-          ),
+          child: CircularProgressIndicator(strokeWidth: 3.0, valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow)),
         ),
       );
     }
 
-    // Case 2: A song is loaded and ready (or playing/paused), but not loading.
     if (playerProvider.currentTrack != null) {
       return FloatingActionButton(
         onPressed: () {
-          _scrollToCurrentAlbum(animate: true);
+          _scrollToCurrentAlbum();
           Navigator.pushNamed(context, '/music_player_page');
         },
         backgroundColor: Colors.transparent,
@@ -350,8 +331,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
         ),
       );
     }
-    
-    // Case 3: No song is loaded and the player is not loading.
+
     return null;
   }
 }

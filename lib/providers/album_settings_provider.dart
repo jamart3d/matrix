@@ -2,104 +2,134 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-// Preference Keys
-const String PREF_SKIP_SHOWS_PAGE = 'skipShowsPage';
-const String PREF_MARQUEE_TITLES = 'marqueeTitles';
-const String PREF_SHOW_SORT_ORDER = 'showSortOrder';
-const String PREF_MARQUEE_PLAYER_TITLE = 'marqueePlayerTitle';
-const String PREF_DISPLAY_ALBUM_RELEASE_NUMBER = 'displayAlbumReleaseNumber';
-const String PREF_SINGLE_EXPANSION = 'singleExpansion';
-const String PREF_SHOW_BUFFER_INFO = 'showBufferInfo'; // NEW KEY
+import 'package:logger/logger.dart';
 
 enum ShowSortOrder { dateDescending, dateAscending }
 
 class AlbumSettingsProvider with ChangeNotifier {
-  // Private backing fields
+  final _logger = Logger();
+
+  // --- KEYS for SharedPreferences ---
+  static const String _skipShowsPageKey = 'skipShowsPage';
+  static const String _marqueeTitlesKey = 'marqueeTitles';
+  static const String _singleExpansionKey = 'singleExpansion';
+  static const String _showYearScrollbarKey = 'showYearScrollbar';
+  static const String _showSortOrderKey = 'showSortOrder';
+  static const String _marqueePlayerTitleKey = 'marqueePlayerTitle';
+  static const String _displayAlbumReleaseNumberKey = 'displayAlbumReleaseNumber';
+  static const String _matrixRainSpeedKey = 'matrixRainSpeed';
+  // --- KEY RESTORED ---
+  static const String _showBufferInfoKey = 'showBufferInfo';
+
+  // --- SETTINGS PROPERTIES ---
   bool _skipShowsPage = false;
   bool _marqueeTitles = true;
+  bool _singleExpansion = true;
+  bool _showYearScrollbar = true;
   ShowSortOrder _showSortOrder = ShowSortOrder.dateDescending;
   bool _marqueePlayerTitle = true;
-  bool _displayAlbumReleaseNumber = true;
-  bool _singleExpansion = false;
-  bool _showBufferInfo = false; // NEW PROPERTY
+  bool _displayAlbumReleaseNumber = false;
+  double _matrixRainSpeed = 5.0;
+  // --- PROPERTY RESTORED ---
+  bool _showBufferInfo = false;
 
-  // Public getters
+  // --- GETTERS ---
   bool get skipShowsPage => _skipShowsPage;
   bool get marqueeTitles => _marqueeTitles;
+  bool get singleExpansion => _singleExpansion;
+  bool get showYearScrollbar => _showYearScrollbar;
   ShowSortOrder get showSortOrder => _showSortOrder;
   bool get marqueePlayerTitle => _marqueePlayerTitle;
   bool get displayAlbumReleaseNumber => _displayAlbumReleaseNumber;
-  bool get singleExpansion => _singleExpansion;
-  bool get showBufferInfo => _showBufferInfo; // NEW GETTER
+  double get matrixRainSpeed => _matrixRainSpeed;
+  // --- GETTER RESTORED ---
+  bool get showBufferInfo => _showBufferInfo;
 
   AlbumSettingsProvider() {
     _loadSettings();
   }
 
-  // Load all settings from SharedPreferences
   Future<void> _loadSettings() async {
+    _logger.i("Loading settings from SharedPreferences...");
     final prefs = await SharedPreferences.getInstance();
-
-    _skipShowsPage = prefs.getBool(PREF_SKIP_SHOWS_PAGE) ?? false;
-    _marqueeTitles = prefs.getBool(PREF_MARQUEE_TITLES) ?? true;
-    _showSortOrder = ShowSortOrder.values[prefs.getInt(PREF_SHOW_SORT_ORDER) ?? 0];
-    _marqueePlayerTitle = prefs.getBool(PREF_MARQUEE_PLAYER_TITLE) ?? true;
-    _displayAlbumReleaseNumber = prefs.getBool(PREF_DISPLAY_ALBUM_RELEASE_NUMBER) ?? true;
-    _singleExpansion = prefs.getBool(PREF_SINGLE_EXPANSION) ?? false;
-    _showBufferInfo = prefs.getBool(PREF_SHOW_BUFFER_INFO) ?? false; // LOAD NEW SETTING
+    _skipShowsPage = prefs.getBool(_skipShowsPageKey) ?? false;
+    _marqueeTitles = prefs.getBool(_marqueeTitlesKey) ?? true;
+    _singleExpansion = prefs.getBool(_singleExpansionKey) ?? true;
+    _showYearScrollbar = prefs.getBool(_showYearScrollbarKey) ?? true;
+    _showSortOrder = ShowSortOrder.values[prefs.getInt(_showSortOrderKey) ?? 0];
+    _marqueePlayerTitle = prefs.getBool(_marqueePlayerTitleKey) ?? true;
+    _displayAlbumReleaseNumber = prefs.getBool(_displayAlbumReleaseNumberKey) ?? false;
+    _matrixRainSpeed = prefs.getDouble(_matrixRainSpeedKey) ?? 5.0;
+    // --- LOADING LOGIC RESTORED ---
+    _showBufferInfo = prefs.getBool(_showBufferInfoKey) ?? false;
 
     notifyListeners();
   }
 
-  // Setters that update state and persist to SharedPreferences
+  // --- SETTERS ---
+
+  // ... (all other setters remain the same) ...
   Future<void> setSkipShowsPage(bool value) async {
     _skipShowsPage = value;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(PREF_SKIP_SHOWS_PAGE, value);
-    notifyListeners();
-  }
-
-  Future<void> setMarqueeTitles(bool value) async {
-    _marqueeTitles = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(PREF_MARQUEE_TITLES, value);
-    notifyListeners();
-  }
-
-  Future<void> setShowSortOrder(ShowSortOrder value) async {
-    _showSortOrder = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(PREF_SHOW_SORT_ORDER, value.index);
-    notifyListeners();
-  }
-
-  Future<void> setMarqueePlayerTitle(bool value) async {
-    _marqueePlayerTitle = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(PREF_MARQUEE_PLAYER_TITLE, value);
+    await prefs.setBool(_skipShowsPageKey, value);
     notifyListeners();
   }
 
   Future<void> setDisplayAlbumReleaseNumber(bool value) async {
     _displayAlbumReleaseNumber = value;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(PREF_DISPLAY_ALBUM_RELEASE_NUMBER, value);
+    await prefs.setBool(_displayAlbumReleaseNumberKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setMatrixRainSpeed(double value) async {
+    _matrixRainSpeed = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_matrixRainSpeedKey, value);
+    notifyListeners();
+  }
+
+  // --- SETTER RESTORED ---
+  Future<void> setShowBufferInfo(bool value) async {
+    _showBufferInfo = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showBufferInfoKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setMarqueeTitles(bool value) async {
+    _marqueeTitles = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_marqueeTitlesKey, value);
     notifyListeners();
   }
 
   Future<void> setSingleExpansion(bool value) async {
     _singleExpansion = value;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(PREF_SINGLE_EXPANSION, value);
+    await prefs.setBool(_singleExpansionKey, value);
     notifyListeners();
   }
 
-  // NEW SETTER
-  Future<void> setShowBufferInfo(bool value) async {
-    _showBufferInfo = value;
+  Future<void> setShowYearScrollbar(bool value) async {
+    _showYearScrollbar = value;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(PREF_SHOW_BUFFER_INFO, value);
+    await prefs.setBool(_showYearScrollbarKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setShowSortOrder(ShowSortOrder value) async {
+    _showSortOrder = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_showSortOrderKey, value.index);
+    notifyListeners();
+  }
+
+  Future<void> setMarqueePlayerTitle(bool value) async {
+    _marqueePlayerTitle = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_marqueePlayerTitleKey, value);
     notifyListeners();
   }
 }

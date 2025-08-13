@@ -1,104 +1,45 @@
+// lib/helpers/album_helper.dart
+
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:matrix/models/album.dart';
 import 'package:matrix/models/track.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/services/navigation_service.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 
-// A single logger instance for the entire file.
 final _logger = Logger();
 
-/// Safely gets the track player provider from the widget tree.
+// --- PROVIDER HELPER ---
+
 TrackPlayerProvider? _getTrackPlayerProvider() {
   final context = NavigationService().navigatorKey.currentContext;
   if (context == null || !context.mounted) {
     _logger.e("Cannot get TrackPlayerProvider: context is not available");
     return null;
   }
-  
-  try {
-    return Provider.of<TrackPlayerProvider>(context, listen: false);
-  } catch (e) {
-    _logger.e("Error getting TrackPlayerProvider: $e");
-    return null;
-  }
+  return Provider.of<TrackPlayerProvider>(context, listen: false);
 }
 
-/// Shows a simple SnackBar feedback message to the user.
-void _showFeedbackMessage(String message) {
-  final context = NavigationService().navigatorKey.currentContext;
-  if (context == null || !context.mounted) return;
-  
-  ScaffoldMessenger.of(context).hideCurrentSnackBar(); 
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 2),
-      behavior: SnackBarBehavior.floating,
-    ),
-  );
-}
+// --- PLAYBACK HELPERS ---
 
-// --- PUBLIC API ---
-
-/// Clears the current playlist, adds a new one, and immediately starts
-/// playing from the specified track index.
-Future<void> playAlbumFromTracks(
-  List<Track> tracks, {
-  int initialIndex = 0, // <-- The {} make this an optional named parameter.
-}) async {
+Future<void> playAlbumFromTracks(List<Track> tracks, {int initialIndex = 0}) async {
   if (tracks.isEmpty) {
     _logger.w("Attempted to play album with empty track list");
     return;
   }
-  
-  // Ensure the index is always valid.
-  initialIndex = initialIndex.clamp(0, tracks.length - 1);
-
-  _logger.i("Attempting to play album with ${tracks.length} tracks, starting at index $initialIndex.");
-  
+  final validInitialIndex = initialIndex.clamp(0, tracks.length - 1);
   final provider = _getTrackPlayerProvider();
   if (provider == null) return;
-
-  await provider.replacePlaylistAndPlay(tracks, initialIndex: initialIndex);
-  _logger.i("Playback initiated for album: ${tracks[initialIndex].albumName}");
+  await provider.replacePlaylistAndPlay(tracks, initialIndex: validInitialIndex);
 }
 
-/// Validates that an album map contains a valid list of tracks.
-bool _isValidAlbumData(Map<String, dynamic> albumData) {
-  return albumData.containsKey('songs') && 
-         albumData['songs'] is List<Track> && 
-         (albumData['songs'] as List<Track>).isNotEmpty;
-}
-
-/// Selects a random album from the provided list and immediately starts playing it.
-Future<void> playRandomAlbum(List<Map<String, dynamic>> allAlbumData) async {
-  _logger.i("Attempting to select and play a random album.");
-  
-  final validAlbums = allAlbumData.where(_isValidAlbumData).toList();
-  if (validAlbums.isEmpty) {
-    _logger.w("No valid albums available for random selection");
-    _showFeedbackMessage("No albums available to play");
-    return;
-  }
-
-  final randomIndex = Random().nextInt(validAlbums.length);
-  final randomAlbum = validAlbums[randomIndex];
-  final albumTracks = randomAlbum['songs'] as List<Track>;
-  final albumName = randomAlbum['album'] as String? ?? 'Unknown Album';
-
-  _logger.d("Random album selected: '$albumName' at index $randomIndex.");
-
-  // This call is now correct because playAlbumFromTracks has an optional parameter.
-  await playAlbumFromTracks(albumTracks);
-}
-
+// =======================================================================
+// === VERIFY THIS FUNCTION EXISTS EXACTLY AS WRITTEN BELOW            ===
+// =======================================================================
 /// Plays a specific track from a list, loading the entire list into the playlist.
-Future<void> playTrackFromAlbum(
-  List<Track> albumTracks,
-  Track specificTrack,
-) async {
+Future<void> playTrackFromAlbum(List<Track> albumTracks, Track specificTrack) async {
   if (albumTracks.isEmpty) {
     _logger.w("Attempted to play track from empty album");
     return;
@@ -116,21 +57,45 @@ Future<void> playTrackFromAlbum(
   await playAlbumFromTracks(albumTracks, initialIndex: trackIndex);
 }
 
-/// Shuffles and plays an album.
-Future<void> playAlbumShuffled(List<Track> tracks) async {
-  if (tracks.isEmpty) {
-    _logger.w("Attempted to shuffle empty track list");
+
+Future<void> playRandomAlbum(List<Album> allAlbums) async {
+  final playableAlbums = allAlbums.where((album) => album.tracks.isNotEmpty).toList();
+  if (playableAlbums.isEmpty) {
     return;
   }
-
-  _logger.i("Shuffling and playing album with ${tracks.length} tracks");
-  
-  final shuffledTracks = List<Track>.from(tracks)..shuffle();
-  
-  await playAlbumFromTracks(shuffledTracks);
+  final randomAlbum = playableAlbums[Random().nextInt(playableAlbums.length)];
+  _logger.d("Random album selected: '${randomAlbum.name}'.");
+  await playAlbumFromTracks(randomAlbum.tracks);
 }
 
-/// Convenience method to quickly play a single track.
-Future<void> playSingleTrack(Track track) async {
-  await playAlbumFromTracks([track]);
+// --- OTHER UTILITIES ---
+
+String generateAlbumArt(int albumIndex) {
+  const pathPrefix = 'assets/images/trix_album_art/trix';
+  const extension = '.webp';
+  return '$pathPrefix${albumIndex.toString().padLeft(2, '0')}$extension';
+}
+
+String formatAlbumName(String albumName) {
+  final parts = albumName.split('-');
+  if (parts.length > 3) {
+    return parts.sublist(3).join('-').replaceAll(RegExp(r'^[^a-zA-Z0-9]'), '');
+  }
+  return albumName;
+}
+
+String extractDateFromAlbumName(String albumName) {
+  final parts = albumName.split('-');
+  if (parts.length >= 3) {
+    return parts.sublist(0, 3).join('-');
+  }
+  return '';
+}
+
+void preloadAlbumImages(List<Album> albums, BuildContext context) {
+  for (final album in albums) {
+    if (album.albumArt.isNotEmpty) {
+      precacheImage(AssetImage(album.albumArt), context);
+    }
+  }
 }

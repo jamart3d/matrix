@@ -1,9 +1,13 @@
+// lib/models/show.dart
+
+import 'package:flutter/foundation.dart';
 import 'package:matrix/models/track.dart';
 
+@immutable // Enforce immutability for the class
 class Show {
   // Properties defining the conceptual show.
   final String uniqueId; // e.g., "Grateful Dead-1977-05-08"
-  final String name; // The full album name from the first source
+  final String name;     // The full album name from the first source
   final String artist;
   final String date;
   final String year;
@@ -12,7 +16,7 @@ class Show {
   // A map of sources. Key is the shnid (String), value is the list of tracks for that source.
   final Map<String, List<Track>> sources;
 
-  Show({
+  const Show({ // Make constructor const
     required this.uniqueId,
     required this.name,
     required this.artist,
@@ -22,7 +26,6 @@ class Show {
     required this.sources,
   });
 
-  // --- NEW: Add this factory constructor back ---
   /// Creates a Show instance from a JSON object.
   /// This is used for pre-structured data sources like 'data_opt.json'.
   /// It assumes the JSON represents a show with a single source/shnid.
@@ -35,11 +38,10 @@ class Show {
     final shnid = json['shnid'] as String? ?? '0';
     final tracksJson = json['tracks'] as List? ?? [];
 
+    // 2. Map track JSON to Track objects.
+    // --- IMPROVEMENT: Pass `shnid` directly to the constructor ---
     final List<Track> parsedTracks = tracksJson.map((trackJson) {
-      // First, create the track using the standard constructor
-      final track = Track.fromJson(trackJson as Map<String, dynamic>);
-      // Now, create a copy of the track, but with the correct shnid
-      return track.copyWith(shnid: shnid);
+      return Track.fromJson(trackJson as Map<String, dynamic>, shnid: shnid);
     }).toList();
 
     // 3. Derive the venue and uniqueId for consistency with the other data loader.

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:matrix/pages/albums_list_wheel_page.dart';
 import 'package:matrix/pages/albums_page.dart';
+import 'package:matrix/pages/matrix_rain_page.dart';
 import 'package:matrix/pages/music_player_page.dart';
 import 'package:matrix/pages/settings_page.dart';
 import 'package:matrix/pages/shows_page.dart';
@@ -131,7 +132,8 @@ Map<String, WidgetBuilder> _buildRoutes() {
     Routes.showsMusicPlayerPage: (context) => const ShowsMusicPlayerPage(),
     Routes.trackPlaylistPage: (context) => const TrackPlaylistPage(),
     Routes.albumsListWheelPage: (context) => const AlbumListWheelPage(),
-    Routes.albumsGridPage: (context) => const AlbumsGridPage(),
+    // Routes.albumsGridPage: (context) => const AlbumsGridPage(),
+    Routes.matrixRainPage: (context) => const MatrixRainPage(),
     Routes.settingsPage: (context) => const SettingsPage(),
   };
 }
@@ -144,6 +146,7 @@ class Routes {
   static const String showsMusicPlayerPage = '/shows_music_player_page';
   static const String trackPlaylistPage = '/song_playlist_page';
   static const String albumsListWheelPage = '/albums_list_wheel_page';
-  static const String albumsGridPage = '/albums_grid_page';
+  // static const String albumsGridPage = '/albums_grid_page';
+  static const String matrixRainPage = '/matrix_rain_page';
   static const String settingsPage = '/settings_page';
 }

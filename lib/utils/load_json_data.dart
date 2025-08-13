@@ -1,84 +1,81 @@
 // lib/utils/load_json_data.dart
 
-import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:matrix/models/album.dart';
 import 'package:matrix/models/track.dart';
-import 'package:matrix/utils/album_utils.dart';
+import 'package:logger/logger.dart';
 
-Future<void> loadData(BuildContext context,
-    Function(List<Map<String, dynamic>>?) callback) async {
+final _logger = Logger();
+
+// This helper is now private to this file since it's only used here.
+String _generateAlbumArt(int albumIndex) {
+  const pathPrefix = 'assets/images/trix_album_art/trix';
+  const extension = '.webp';
+  return '$pathPrefix${albumIndex.toString().padLeft(2, '0')}$extension';
+}
+
+/// Loads and parses album data from the 'data_opt.json' asset.
+///
+/// This function is fully self-contained, has no UI dependencies, and returns
+/// a Future with a type-safe list of [Album] objects.
+Future<List<Album>> loadAlbums() async {
+  const assetPath = 'assets/data_opt.json';
+  _logger.i("Loading and parsing albums from $assetPath...");
+  final stopwatch = Stopwatch()..start();
+
   try {
-    final jsonString =
-        await DefaultAssetBundle.of(context).loadString('assets/data_opt.json');
+    final jsonString = await rootBundle.loadString(assetPath);
     final List<dynamic> jsonData = jsonDecode(jsonString);
 
-    final List<Map<String, dynamic>> albumDataList = [];
-    final Map<String, List<Track>> albumTracksMapForArt = {};
+    final List<Album> finalAlbums = [];
     int releaseCounter = 1;
 
     for (final albumJson in jsonData) {
-      if (albumJson is Map<String, dynamic>) {
-        final String albumName = albumJson['name'] ?? 'Unknown Album';
-        final String artistName = albumJson['artist'] ?? 'Unknown Artist';
-        final String albumDate = albumJson['date'] ?? 'Unknown Date';
-        final List<dynamic> tracksJson = albumJson['tracks'] ?? [];
-        
-        // Use the new, dedicated factory to parse tracks correctly
+      if (albumJson is! Map<String, dynamic>) continue;
+
+      final String albumName = albumJson['name'] ?? 'Unknown Album';
+      final String artistName = albumJson['artist'] ?? 'Unknown Artist';
+      final String albumDate = albumJson['date'] ?? 'Unknown Date';
+      final List<dynamic> tracksJson = albumJson['tracks'] as List? ?? [];
+
+      // Determine the final album art path for this album upfront.
+      final String albumArtPath = _generateAlbumArt(releaseCounter);
+
+      if (tracksJson.isNotEmpty) {
+        // Create final track objects with the correct art path already included.
         final List<Track> parsedTracks = tracksJson.map((trackJson) {
-          return Track.fromAlbumOptJson(
+          final initialTrack = Track.fromAlbumOptJson(
             json: trackJson,
             albumName: albumName,
             artistName: artistName,
             albumReleaseNumber: releaseCounter,
             albumReleaseDate: albumDate,
           );
+          // Return a new, immutable copy with the album art correctly set.
+          return initialTrack.copyWith(albumArt: () => albumArtPath);
         }).toList();
 
-        if (parsedTracks.isNotEmpty) {
-          albumTracksMapForArt[albumName] = parsedTracks;
-
-          albumDataList.add({
-            'album': albumName,
-            'songs': parsedTracks,
-            'songCount': parsedTracks.length,
-            'artistName': artistName,
-            'albumArt': 'assets/images/t_steal.webp',
-            'releaseNumber': releaseCounter,
-            'releaseDate': albumDate,
-          });
-        }
-        releaseCounter++;
+        // Create the final Album object.
+        finalAlbums.add(Album(
+          name: albumName,
+          artist: artistName,
+          tracks: parsedTracks,
+          releaseNumber: releaseCounter,
+          releaseDate: albumDate,
+          albumArt: albumArtPath,
+        ));
       }
+      releaseCounter++;
     }
 
-    final Map<String, int> albumIndexMap = {
-      for (var album in albumDataList) album['album']: album['releaseNumber']
-    };
-    assignAlbumArtToTracks(albumTracksMapForArt, albumIndexMap);
+    stopwatch.stop();
+    _logger.i("Successfully loaded ${finalAlbums.length} albums in ${stopwatch.elapsed}ms.");
 
-    for (var album in albumDataList) {
-      final tracks = album['songs'] as List<Track>;
-      if (tracks.isNotEmpty) {
-        album['albumArt'] = tracks.first.albumArt ?? 'assets/images/t_steal.webp';
-      }
-    }
-    
-    callback(albumDataList);
+    return finalAlbums;
 
   } catch (e, stacktrace) {
-    debugPrint("Fatal error loading or processing data_opt.json: $e");
-    debugPrintStack(stackTrace: stacktrace);
-    if (context.mounted) _showErrorSnackBar(context, 'Error loading album data.');
-    callback(null);
+    _logger.e("Fatal error loading or processing $assetPath", error: e, stackTrace: stacktrace);
+    rethrow;
   }
-}
-
-void _showErrorSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 5),
-      backgroundColor: Colors.red,
-    ),
-  );
 }
