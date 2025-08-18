@@ -1,0 +1,26 @@
+<!-- android/app/src/main/res/xml/actions.xml -->
+<actions>
+    <action intentName="actions.intent.PLAY_MEDIA">
+        <fulfillment urlTemplate="app://com.matrix.app/playRandomShow">
+            <!-- You can add parameters here later if you want to play specific shows -->
+        </fulfillment>
+        <!-- Define what media types this action supports -->
+        <parameter name="media.name">
+            <entity-set-reference entitySetId="matrix_content"/>
+        </parameter>
+    </action>
+
+    <!-- Define the entity set for your app's media content -->
+    <entity-sets>
+        <entity-set entitySetId="matrix_content">
+            <entity
+                identifier="random_show"
+                name="random matrix show"
+                alternateNames="@array/matrix_show_phrases"/>
+            <entity
+                identifier="matrix_music"
+                name="matrix music"
+                alternateNames="@array/matrix_music_phrases"/>
+        </entity-set>
+    </entity-sets>
+</actions>

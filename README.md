@@ -3,7 +3,7 @@
 A Flutter project to list and play matrix audio of Grateful Dead shows hosted on archive.org.
 ## Getting Started
 
-This is a simple project for me to learn dart / flutter, and use Google's Project IDX
+This is a simple project for me to learn dart / flutter
 
 
 Features

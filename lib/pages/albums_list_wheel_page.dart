@@ -77,10 +77,23 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     final newAlbumName = currentlyPlayingSong.albumName;
     if (newAlbumName != _currentAlbumName) {
       _logger.d("Provider changed album. Updating wheel UI for: $newAlbumName");
+
+      final album = AlbumDataService().albums.firstWhere(
+            (a) => a.name == newAlbumName,
+        // *** THIS IS THE FIX: Provide the required arguments in the fallback ***
+        orElse: () => Album(
+          name: '',
+          tracks: [],
+          albumArt: 'assets/images/t_steal.webp',
+          releaseNumber: 0,
+          releaseDate: '', // Required argument
+          artist: '',      // Required argument
+        ),
+      );
+
       if (mounted) {
         setState(() {
-          // Get the art directly from the provider, which has the correct logic
-          _currentAlbumArt = context.read<TrackPlayerProvider>().currentAlbumArt;
+          _currentAlbumArt = album.albumArt;
           _currentAlbumName = newAlbumName;
         });
         _scrollToCurrentAlbum();
@@ -125,7 +138,6 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             color: Colors.black.withOpacity(0.5),
-            // --- IMPROVEMENT: FutureBuilder drives the main content ---
             child: FutureBuilder<void>(
               future: _initializationFuture,
               builder: (context, snapshot) {
@@ -136,7 +148,6 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
 
-                // Data is loaded, get it from the service
                 final albums = AlbumDataService().albums;
                 _setupInitialAlbumScroll(albums);
 

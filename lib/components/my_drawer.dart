@@ -1,7 +1,7 @@
 // lib/components/my_drawer.dart
 
 import 'package:flutter/material.dart';
-import 'package:matrix/main.dart'; // <-- IMPORT ADDED to access Routes
+import '../routes.dart';
 
 class MyDrawer extends StatelessWidget {
   const MyDrawer({super.key});
@@ -26,7 +26,7 @@ class MyDrawer extends StatelessWidget {
                   Container(color: Colors.black.withOpacity(0.5)),
                   const Center(
                     child: Text(
-                      'matrix',
+                      'Options',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 32,
@@ -53,7 +53,7 @@ class MyDrawer extends StatelessWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.album, color: Colors.white70),
-                    title: const Text('Albums (List)', style: TextStyle(color: Colors.white)),
+                    title: const Text('hunter\'s trix (List)', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushReplacementNamed(context, Routes.albumsPage);
@@ -61,7 +61,7 @@ class MyDrawer extends StatelessWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.view_carousel, color: Colors.white70),
-                    title: const Text('Albums (Wheel)', style: TextStyle(color: Colors.white)),
+                    title: const Text('Hunter\'s trix (Wheel)', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushReplacementNamed(context, Routes.albumsListWheelPage);
@@ -69,10 +69,9 @@ class MyDrawer extends StatelessWidget {
                   ),
                   const Divider(color: Colors.white24),
 
-                  // --- NEW TILE FOR MATRIX RAIN ---
                   ListTile(
                     leading: const Icon(Icons.grain, color: Colors.green),
-                    title: const Text('Matrix Rain', style: TextStyle(color: Colors.white)),
+                    title: const Text('select a matrix', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context); // Close the drawer first
                       Navigator.pushNamed(context, Routes.matrixRainPage);

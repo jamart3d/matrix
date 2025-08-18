@@ -1,0 +1,17 @@
+<!-- android/app/src/main/res/values/arrays.xml -->
+<resources>
+    <string-array name="matrix_show_phrases">
+        <item>random matrix show</item>
+        <item>random show</item>
+        <item>matrix show</item>
+        <item>random dead show</item>
+        <item>grateful dead show</item>
+    </string-array>
+
+    <string-array name="matrix_music_phrases">
+        <item>matrix music</item>
+        <item>matrix</item>
+        <item>dead music</item>
+        <item>grateful dead</item>
+    </string-array>
+</resources>

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-import 'package:matrix/helpers/album_helper.dart'; // Ensure this import exists
+import 'package:matrix/helpers/album_helper.dart';
 import 'package:matrix/models/track.dart';
 import 'package:matrix/services/album_data_service.dart';
 import 'package:matrix/utils/duration_formatter.dart';
@@ -18,19 +18,28 @@ class TrackPlayerProvider extends ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
   final Logger _logger = Logger();
 
+  // --- STATE ---
   List<Track> _playlist = [];
   int _currentIndex = 0;
   String? _cachedAlbumArt;
-  bool _isLoading = false;
+  bool _isLoading = false; // This is now ONLY controlled by the stream listener
   bool _isPlaying = false;
   String? _lastError;
 
+  // **** ADDED FOR DEEP LINK FIX ****
+  bool _wasInitiatedByDeepLink = false;
+
   final Map<String, Future<Uri>> _tempFileUriCache = {};
 
+  // --- PUBLIC GETTERS ---
   bool get isPlaying => _isPlaying;
   bool get isLoading => _isLoading;
   String? get lastError => _lastError;
   int get currentIndex => _currentIndex;
+
+  // **** ADDED FOR DEEP LINK FIX ****
+  bool get wasInitiatedByDeepLink => _wasInitiatedByDeepLink;
+
 
   Track? get currentTrack =>
       _playlist.isNotEmpty && _currentIndex >= 0 && _currentIndex < _playlist.length
@@ -43,20 +52,20 @@ class TrackPlayerProvider extends ChangeNotifier {
   String get currentArtistName => currentTrack?.artistName ?? 'Unknown Artist';
   String get currentAlbumTitle => currentTrack?.albumName ?? 'Unknown Album';
 
+  // --- DURATION & POSITION GETTERS ---
   Duration get currentDuration => _audioPlayer.position;
   Duration get totalDuration => _audioPlayer.duration ?? Duration.zero;
   String get formattedCurrentDuration => formatDuration(currentDuration);
   String get formattedTotalDuration => formatDuration(totalDuration);
 
+  // --- STREAMS ---
   Stream<Duration> get positionStream => _audioPlayer.positionStream;
   Stream<Duration> get bufferedPositionStream => _audioPlayer.bufferedPositionStream;
   Stream<PlayerState> get playerStateStream => _audioPlayer.playerStateStream;
   Stream<ProcessingState> get processingStateStream => _audioPlayer.processingStateStream;
   Stream<Duration?> get durationStream => _audioPlayer.durationStream;
 
-  // =======================================================================
-  // === THIS METHOD IS NOW CORRECTLY RESTORED                           ===
-  // =======================================================================
+  // --- BUFFER HELPERS ---
   double getCurrentBufferHealth() {
     final duration = _audioPlayer.duration;
     final position = _audioPlayer.position;
@@ -88,11 +97,27 @@ class TrackPlayerProvider extends ChangeNotifier {
     super.dispose();
   }
 
+  // **** ADDED FOR DEEP LINK FIX ****
+  /// Sets a flag to indicate playback was started via a deep link.
+  void setInitiatedByDeepLink() {
+    _wasInitiatedByDeepLink = true;
+    // No need to call notifyListeners() for this.
+  }
+
+  // **** ADDED FOR DEEP LINK FIX ****
+  /// Consumes the deep link flag after it has been checked.
+  void consumeDeepLinkInitiation() {
+    _wasInitiatedByDeepLink = false;
+  }
+
   void _listenToAudioPlayerEvents() {
+    // This listener is now the SINGLE, RELIABLE source of truth for the loading state.
     _audioPlayer.playerStateStream.listen((state) {
       final newIsPlaying = state.playing;
-      final newIsLoading = state.processingState == ProcessingState.loading || state.processingState == ProcessingState.buffering;
+      final newIsLoading = state.processingState == ProcessingState.loading ||
+          state.processingState == ProcessingState.buffering;
 
+      // Only notify listeners if a relevant state has actually changed.
       if (_isPlaying != newIsPlaying || _isLoading != newIsLoading) {
         _isPlaying = newIsPlaying;
         _isLoading = newIsLoading;
@@ -120,7 +145,6 @@ class TrackPlayerProvider extends ChangeNotifier {
     } else {
       final releaseNumber = AlbumDataService().getReleaseNumberForAlbum(track.albumName);
       if (releaseNumber != null) {
-        // This call is now valid.
         _cachedAlbumArt = generateAlbumArt(releaseNumber);
       } else {
         _cachedAlbumArt = 'assets/images/t_steal.webp';
@@ -129,8 +153,10 @@ class TrackPlayerProvider extends ChangeNotifier {
   }
 
   Future<void> replacePlaylistAndPlay(List<Track> tracks, {int initialIndex = 0}) async {
-    _isLoading = true;
-    notifyListeners();
+    _logger.i("Replacing playlist with ${tracks.length} tracks...");
+
+    // Manual flags are removed to prevent the race condition.
+    // The playerStateStream listener will now exclusively handle the isLoading state.
 
     try {
       await _audioPlayer.stop();
@@ -139,22 +165,35 @@ class TrackPlayerProvider extends ChangeNotifier {
 
       _loadPlaylistMetadata();
 
-      if (_playlist.isEmpty) return;
+      if (_playlist.isEmpty) {
+        // If playlist is empty, manually ensure loading is false and notify.
+        if (_isLoading) {
+          _isLoading = false;
+          notifyListeners();
+        }
+        return;
+      }
 
       final artUri = await _getUriForAsset(currentAlbumArt);
       final audioSources = await Future.wait(_playlist.map((track) => _createAudioSource(track, artUri)));
 
+      // The moment this is set, the playerStateStream will emit a 'loading' or 'buffering'
+      // state, which will be caught by our listener, correctly setting isLoading = true
+      // and showing the spinner on the FAB.
       await _audioPlayer.setAudioSource(
         ConcatenatingAudioSource(children: audioSources),
         initialIndex: _currentIndex,
         preload: true,
       );
       await play();
-    } finally {
+    } catch (e, s) {
+      _logger.e("Error in replacePlaylistAndPlay", error: e, stackTrace: s);
+      _lastError = "Failed to start playlist.";
+      // Ensure loading is turned off on error.
       if (_isLoading) {
         _isLoading = false;
-        notifyListeners();
       }
+      notifyListeners();
     }
   }
 
@@ -186,9 +225,25 @@ class TrackPlayerProvider extends ChangeNotifier {
     );
   }
 
+  // --- PLAYBACK CONTROLS ---
+
   Future<void> play() async => _audioPlayer.play();
   Future<void> pause() async => _audioPlayer.pause();
   Future<void> seekTo(Duration position) async => _audioPlayer.seek(position);
+
+  Future<void> seekToIndex(int index) async {
+    if (index >= 0 && index < _playlist.length) {
+      _logger.i("Seeking to playlist index: $index");
+      try {
+        await _audioPlayer.seek(Duration.zero, index: index);
+        if (!_isPlaying) {
+          await play();
+        }
+      } catch (e, s) {
+        _logger.e("Error seeking to index $index", error: e, stackTrace: s);
+      }
+    }
+  }
 
   Future<void> next() async {
     if (_audioPlayer.hasNext) await _audioPlayer.seekToNext();
