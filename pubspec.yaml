@@ -4,7 +4,7 @@ description: "a list of matrix's and just_audio to play them from archive.org"
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 
-version: 1.0.61+17
+version: 1.0.63+17
 
 environment:
   sdk: '>=3.4.3 <4.0.0'

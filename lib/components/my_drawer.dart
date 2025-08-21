@@ -53,16 +53,15 @@ class MyDrawer extends StatelessWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
-                    title: const Text('Seamons mixes', style: TextStyle(color: Colors.white)),
+                    title: const Text('Seamons list', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
-                      // --- FIX: Correctly navigate to shows page with argument ---
-                      Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'seamons');
+                      Navigator.pushReplacementNamed(context, Routes.albumsPage, arguments: 'seamons');
                     },
                   ),
                   ListTile(
                     leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
-                    title: const Text("SirMick's mixes", style: TextStyle(color: Colors.white)),
+                    title: const Text("SirMick's list", style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'sirmick');
@@ -70,7 +69,7 @@ class MyDrawer extends StatelessWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
-                    title: const Text("Dusborne's mixes", style: TextStyle(color: Colors.white)),
+                    title: const Text("Dusborne's list", style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'dusborne');
@@ -95,7 +94,7 @@ class MyDrawer extends StatelessWidget {
                   const Divider(color: Colors.white24),
                   ListTile(
                     leading: const Icon(Icons.grain, color: Colors.green),
-                    title: const Text('Select a matrix', style: TextStyle(color: Colors.white)),
+                    title: const Text('matrix', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, Routes.matrixRainPage);

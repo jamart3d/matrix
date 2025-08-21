@@ -1,7 +1,6 @@
 // lib/pages/shows_page.dart
 
 import 'dart:ui';
-// import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:matrix/components/animated_playing_fab.dart';
 import 'package:matrix/helpers/shows_helper.dart';
@@ -81,11 +80,9 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     });
   }
 
-  // --- MODIFIED: This method now depends on the currently filtered list ---
   Future<void> _scrollToCurrentShow() async {
     if (_currentShowName == null || !_itemScrollController.isAttached || _originalShows.isEmpty) return;
 
-    // We must filter the shows here as well to find the correct index in the visible list
     final category = ModalRoute.of(context)?.settings.arguments as String?;
     final filteredShows = _getFilteredShows(category);
     final sortedShows = _getSortedShows(filteredShows, context.read<AlbumSettingsProvider>().showSortOrder);
@@ -97,7 +94,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     }
   }
 
-  // --- NEW HELPER FUNCTIONS FOR FILTERING AND SORTING ---
   List<Show> _getFilteredShows(String? category) {
     if (category == null) {
       return _originalShows; // Return all shows
@@ -114,11 +110,11 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   String _getPageTitle(String? category) {
     switch (category) {
       case 'seamons': return "Seamons' matrix -> ";
-      case 'tobin': return "Tobin's matrix -> ";
-      case 'sirmick': return "random SirMick's matrix -> ";
-      case 'dusborne': return "random Dusborne's matrix -> ";
-      case 'misc': return "random misc maxtrix";
-      default: return "play a random show - >";
+      case 'tobin': return "random Tobin's -> ";
+      case 'sirmick': return "random SirMick's -> ";
+      case 'dusborne': return "random Dusborne's -> ";
+      case 'misc': return "random misc maxtrix - >";
+      default: return "select a random show - >";
     }
   }
 
@@ -128,11 +124,9 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     final playerProvider = context.watch<TrackPlayerProvider>();
     final settingsProvider = context.watch<AlbumSettingsProvider>();
 
-    // --- ARGUMENT HANDLING AND DATA PREPARATION ---
     final category = ModalRoute.of(context)?.settings.arguments as String?;
     final pageTitle = _getPageTitle(category);
 
-    // Filter and sort the shows on every build to react to changes.
     final filteredShows = _getFilteredShows(category);
     final sortedShows = _getSortedShows(filteredShows, settingsProvider.showSortOrder);
 
@@ -147,7 +141,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
             icon: const Icon(Icons.question_mark),
             tooltip: 'Play Random Show',
             onPressed: () {
-              // --- UPDATED: Use the filtered list for random show selection ---
               if (sortedShows.isNotEmpty) {
                 playRandomShow(playerProvider, sortedShows);
               }
@@ -161,7 +154,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
         fit: StackFit.expand,
         children: [
           _buildBlurredBackground(),
-          // --- UPDATED: Pass the final list to the builder method ---
           _buildShowsList(sortedShows),
           if (_showDeepLinkMessage) _buildDeepLinkNotification(),
         ],
@@ -170,7 +162,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   Widget _buildDeepLinkNotification() {
-    // ... (This method is unchanged)
     return Positioned(
       top: 20,
       left: 20,
@@ -212,7 +203,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   Widget _buildFloatingActionButton(TrackPlayerProvider playerProvider, AlbumSettingsProvider settingsProvider) {
-    // ... (This method is unchanged)
     final isLarge = settingsProvider.fabSize == FabSize.large;
     final double fabSize = isLarge ? 80.0 : 50.0;
 
@@ -228,14 +218,12 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   Widget _buildBlurredBackground() {
-    // ... (This method is unchanged)
     return Container(
       decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/t_steal.webp'), fit: BoxFit.cover)),
       child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), child: Container(color: Colors.black.withOpacity(0.3))),
     );
   }
 
-  // --- MODIFIED: This method now receives the list to build ---
   Widget _buildShowsList(List<Show> showsToDisplay) {
     return FutureBuilder<List<Show>>(
       future: _showsFuture,
@@ -281,7 +269,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   Widget _buildShowTile(AlbumSettingsProvider settings, TrackPlayerProvider playerProvider, Show show) {
-    // ... (This method is unchanged)
     final bool isCurrentShow = _currentSourceShnid != null && show.sources.containsKey(_currentSourceShnid);
     final titleStyle = TextStyle(color: isCurrentShow ? Colors.yellow : Colors.white, fontWeight: FontWeight.bold);
 
@@ -304,7 +291,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   List<Widget> _buildExpansionChildren(TrackPlayerProvider playerProvider, Show show) {
-    // ... (This method is unchanged)
     if (show.sourceCount == 1) {
       return show.sources.values.first.map((track) => _buildTrackTile(playerProvider, track, show.sources.values.first)).toList();
     } else {

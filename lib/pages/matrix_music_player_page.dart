@@ -1,7 +1,6 @@
 // lib/pages/matrix_music_player_page.dart
 
 import 'package:flutter/material.dart';
-// --- MODIFIED IMPORT ---
 import 'package:matrix/components/player/themed_progress_bar.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
@@ -18,34 +17,44 @@ class MatrixMusicPlayerPage extends StatefulWidget {
 }
 
 class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
-  // ... (all the existing state and methods remain the same)
   final ScrollController _scrollController = ScrollController();
   int _lastScrolledIndex = -1;
+
+  late final TrackPlayerProvider _playerProvider;
+  // --- FIX Step 1: Add a boolean flag ---
+  bool _isProviderInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    final provider = context.read<TrackPlayerProvider>();
-    provider.addListener(_onProviderChange);
+    _playerProvider = context.read<TrackPlayerProvider>();
+    _playerProvider.addListener(_onProviderChange);
+
+    // --- FIX Step 2: Set the flag to true AFTER initialization ---
+    _isProviderInitialized = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _scrollToCurrent(provider.currentIndex, initial: true);
+        _scrollToCurrent(_playerProvider.currentIndex, initial: true);
       }
     });
   }
 
   @override
   void dispose() {
-    context.read<TrackPlayerProvider>().removeListener(_onProviderChange);
+    // No need to check the flag here, as dispose() is called on a valid object.
+    _playerProvider.removeListener(_onProviderChange);
     _scrollController.dispose();
     super.dispose();
   }
 
   void _onProviderChange() {
-    final provider = context.read<TrackPlayerProvider>();
-    if (provider.currentIndex != _lastScrolledIndex) {
-      _scrollToCurrent(provider.currentIndex);
+    // --- FIX Step 3: Guard the method with the flag ---
+    // If the provider hasn't been fully assigned in initState yet, do nothing.
+    if (!_isProviderInitialized) return;
+
+    if (_playerProvider.currentIndex != _lastScrolledIndex) {
+      _scrollToCurrent(_playerProvider.currentIndex);
     }
   }
 
@@ -67,7 +76,6 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +140,6 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // --- WIDGET CHANGE HERE ---
                     ThemedProgressBar(
                       provider: trackPlayerProvider,
                       activeColor: Colors.green,
@@ -151,7 +158,6 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
       ),
     );
   }
-  // ... (the rest of the file remains the same)
 
   Widget _buildBufferInfoPanel(TrackPlayerProvider provider) {
     return Container(
@@ -244,8 +250,10 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
   }
 
   Widget _buildPlayPauseButton(TrackPlayerProvider provider) {
+    const heroTag = 'play_pause_button_hero_matrix';
+    Widget buttonContent;
     if (provider.isLoading) {
-      return const SizedBox(
+      buttonContent = const SizedBox(
         width: 64.0, height: 64.0,
         child: Center(
           child: SizedBox(
@@ -254,15 +262,22 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
           ),
         ),
       );
+    } else {
+      buttonContent = IconButton(
+        icon: Icon(
+          provider.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+          size: 64.0,
+          color: Colors.green,
+        ),
+        onPressed: provider.isPlaying ? provider.pause : provider.play,
+      );
     }
-
-    return IconButton(
-      icon: Icon(
-        provider.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
-        size: 64.0,
-        color: Colors.green,
+    return Hero(
+      tag: heroTag,
+      child: Material(
+        color: Colors.transparent,
+        child: buttonContent,
       ),
-      onPressed: provider.isPlaying ? provider.pause : provider.play,
     );
   }
 
