@@ -16,6 +16,9 @@ class Show {
   // A map of sources. Key is the shnid (String), value is the list of tracks for that source.
   final Map<String, List<Track>> sources;
 
+  // The new property to store the determined category.
+  final String sourceCreator;
+
   const Show({ // Make constructor const
     required this.uniqueId,
     required this.name,
@@ -24,45 +27,12 @@ class Show {
     required this.year,
     required this.venue,
     required this.sources,
+    required this.sourceCreator, // Added to the constructor
   });
 
-  /// Creates a Show instance from a JSON object.
-  /// This is used for pre-structured data sources like 'data_opt.json'.
-  /// It assumes the JSON represents a show with a single source/shnid.
-  factory Show.fromJson(Map<String, dynamic> json) {
-    // 1. Parse all the simple properties, providing default values for safety.
-    final showName = json['name'] as String? ?? 'Unknown Show';
-    final showArtist = json['artist'] as String? ?? 'Unknown Artist';
-    final showDate = json['date'] as String? ?? 'Unknown Date';
-    final showYear = json['year'] as String? ?? 'Unknown Year';
-    final shnid = json['shnid'] as String? ?? '0';
-    final tracksJson = json['tracks'] as List? ?? [];
-
-    // 2. Map track JSON to Track objects.
-    // --- IMPROVEMENT: Pass `shnid` directly to the constructor ---
-    final List<Track> parsedTracks = tracksJson.map((trackJson) {
-      return Track.fromJson(trackJson as Map<String, dynamic>, shnid: shnid);
-    }).toList();
-
-    // 3. Derive the venue and uniqueId for consistency with the other data loader.
-    final venueRegex = RegExp(r'Live at (.+?) on');
-    final venue = venueRegex.firstMatch(showName)?.group(1) ?? 'Unknown Venue';
-    final uniqueId = '$showArtist-$showDate-$venue';
-
-    // 4. Return a new Show instance.
-    // The 'sources' map is created with a single entry for this shnid.
-    return Show(
-      uniqueId: uniqueId,
-      name: showName,
-      artist: showArtist,
-      date: showDate,
-      year: showYear,
-      venue: venue,
-      sources: {
-        shnid: parsedTracks,
-      },
-    );
-  }
+  // The 'fromJson' factory was removed from this model because the creation logic,
+  // including the new categorization, is now handled more robustly in the
+  // `load_shows_data.dart` utility. This keeps the model clean and focused on data structure.
 
   // --- Helper Getters (Unchanged) ---
 

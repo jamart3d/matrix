@@ -1,18 +1,15 @@
-// lib/pages/album_list_wheel_page.dart
-
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:matrix/components/my_drawer.dart';
 import 'package:matrix/helpers/album_helper.dart';
-import 'package:matrix/models/album.dart'; // Using the type-safe model
-import 'package:matrix/models/track.dart';
+import 'package:matrix/models/album.dart';
 import 'package:matrix/pages/album_detail_page.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/services/album_data_service.dart';
 import 'package:provider/provider.dart';
-import 'package:logger/logger.dart';
+// import 'package:logger/logger.dart';
 
 class AlbumListWheelPage extends StatefulWidget {
   const AlbumListWheelPage({super.key});
@@ -22,90 +19,102 @@ class AlbumListWheelPage extends StatefulWidget {
 }
 
 class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
-  final _logger = Logger(printer: PrettyPrinter(methodCount: 1));
+  // final _logger = Logger(printer: PrettyPrinter(methodCount: 1));
 
-  // --- IMPROVEMENT: State is now driven by a Future ---
   late final Future<void> _initializationFuture;
 
   // State variables
   String _currentAlbumArt = 'assets/images/t_steal.webp';
-  String? _currentAlbumName;
+  String? _highlightedAlbumName; // This is ONLY controlled by the player's state
 
   // Controllers
   late final FixedExtentScrollController _scrollController;
+  late final TrackPlayerProvider _playerProvider;
+
+  bool _isInitialSetupComplete = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController = FixedExtentScrollController();
-    // Start the data loading process, UI will react via FutureBuilder
+
+    _playerProvider = context.read<TrackPlayerProvider>();
+    _playerProvider.addListener(_onPlayerChange);
+
     _initializationFuture = AlbumDataService().init();
   }
 
   @override
   void dispose() {
+    _playerProvider.removeListener(_onPlayerChange);
     _scrollController.dispose();
     super.dispose();
   }
 
-  // This method is now called *after* the FutureBuilder has successfully loaded the data.
-  void _setupInitialAlbumScroll(List<Album> albums) {
-    if (!mounted) return;
+  // --- THIS METHOD IS NOW THE ONLY SOURCE OF TRUTH FOR HIGHLIGHTS ---
+  void _onPlayerChange() {
+    final currentlyPlayingSong = _playerProvider.currentTrack;
+    String newArt = 'assets/images/t_steal.webp';
+    String? newAlbumName;
 
-    // Set initial scroll position based on the currently playing track
-    final currentlyPlaying = context.read<TrackPlayerProvider>().currentTrack;
+    if (currentlyPlayingSong != null) {
+      final album = AlbumDataService().albums.cast<Album?>().firstWhere(
+              (a) => a?.name == currentlyPlayingSong.albumName,
+          orElse: () => null
+      );
+      if (album != null) {
+        newArt = album.albumArt;
+        newAlbumName = album.name;
+      }
+    }
+
+    // Only update state and scroll if the album has actually changed
+    if (newAlbumName != _highlightedAlbumName) {
+      if (mounted) {
+        setState(() {
+          _currentAlbumArt = newArt;
+          _highlightedAlbumName = newAlbumName;
+        });
+        if (newAlbumName != null) {
+          _scrollToPlayingAlbum();
+        }
+      }
+    }
+  }
+
+  void _setupInitialState(List<Album> albums) {
+    if (!mounted || _isInitialSetupComplete || albums.isEmpty) return;
+
+    final currentlyPlaying = _playerProvider.currentTrack;
+
+    // Set initial state based on the player
     if (currentlyPlaying != null) {
-      final initialIndex = albums.indexWhere((album) => album.name == currentlyPlaying.albumName);
-      if (initialIndex != -1) {
+      final album = albums.cast<Album?>().firstWhere((a) => a?.name == currentlyPlaying.albumName, orElse: () => null);
+      if (album != null) {
+        _currentAlbumArt = album.albumArt;
+        _highlightedAlbumName = album.name;
+        final initialIndex = albums.indexOf(album);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
             _scrollController.jumpToItem(initialIndex);
           }
         });
       }
+    } else {
+      // Default to the first album art if nothing is playing
+      _currentAlbumArt = albums.first.albumArt;
+      _highlightedAlbumName = null; // Nothing is highlighted
     }
+
+    _isInitialSetupComplete = true;
   }
 
-  void _updateCurrentAlbum(Track? currentlyPlayingSong) {
-    if (currentlyPlayingSong == null) {
-      if (_currentAlbumName != null) {
-        setState(() => _currentAlbumName = null);
-      }
-      return;
-    }
-
-    final newAlbumName = currentlyPlayingSong.albumName;
-    if (newAlbumName != _currentAlbumName) {
-      _logger.d("Provider changed album. Updating wheel UI for: $newAlbumName");
-
-      final album = AlbumDataService().albums.firstWhere(
-            (a) => a.name == newAlbumName,
-        // *** THIS IS THE FIX: Provide the required arguments in the fallback ***
-        orElse: () => Album(
-          name: '',
-          tracks: [],
-          albumArt: 'assets/images/t_steal.webp',
-          releaseNumber: 0,
-          releaseDate: '', // Required argument
-          artist: '',      // Required argument
-        ),
-      );
-
-      if (mounted) {
-        setState(() {
-          _currentAlbumArt = album.albumArt;
-          _currentAlbumName = newAlbumName;
-        });
-        _scrollToCurrentAlbum();
-      }
-    }
-  }
-
-  void _scrollToCurrentAlbum() {
-    if (_currentAlbumName == null || !_scrollController.hasClients) return;
+  void _scrollToPlayingAlbum() {
+    final currentlyPlaying = _playerProvider.currentTrack;
+    if (currentlyPlaying == null || !_scrollController.hasClients) return;
 
     final albums = AlbumDataService().albums;
-    final index = albums.indexWhere((album) => album.name == _currentAlbumName);
+    final index = albums.indexWhere((album) => album.name == currentlyPlaying.albumName);
 
     if (index != -1 && _scrollController.selectedItem != index) {
       _scrollController.animateToItem(
@@ -118,10 +127,6 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for player changes to update the background and selected item
-    final currentlyPlaying = context.watch<TrackPlayerProvider>().currentTrack;
-    _updateCurrentAlbum(currentlyPlaying);
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
@@ -149,7 +154,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
                 }
 
                 final albums = AlbumDataService().albums;
-                _setupInitialAlbumScroll(albums);
+                _setupInitialState(albums);
 
                 if (albums.isEmpty) {
                   return const Center(child: Text("No albums available."));
@@ -176,7 +181,6 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
         IconButton(
           icon: const Icon(Icons.question_mark),
           onPressed: () {
-            // Check if service is initialized before using its data
             if (AlbumDataService().albums.isNotEmpty) {
               playRandomAlbum(AlbumDataService().albums);
             } else {
@@ -211,7 +215,10 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
             diameterRatio: 2.0,
             perspective: 0.002,
             physics: const FixedExtentScrollPhysics(),
-            onSelectedItemChanged: (index) => HapticFeedback.mediumImpact(),
+            // --- UPDATED: This no longer changes state, only provides feedback ---
+            onSelectedItemChanged: (index) {
+              HapticFeedback.mediumImpact();
+            },
             childDelegate: ListWheelChildBuilderDelegate(
               childCount: albums.length,
               builder: (context, index) {
@@ -239,7 +246,8 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
   }
 
   Widget _buildWheelItem(Album album, AlbumSettingsProvider settings, double itemExtent) {
-    final isSelected = _currentAlbumName == album.name;
+    // This now correctly and exclusively reflects the player's state
+    final isSelected = _highlightedAlbumName == album.name;
 
     return Container(
       width: itemExtent * 0.9,
@@ -271,7 +279,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
                 alignment: Alignment.bottomLeft,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 56),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.bottomCenter,
@@ -329,7 +337,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     if (playerProvider.currentTrack != null) {
       return FloatingActionButton(
         onPressed: () {
-          _scrollToCurrentAlbum();
+          _scrollToPlayingAlbum();
           Navigator.pushNamed(context, '/music_player_page');
         },
         backgroundColor: Colors.transparent,

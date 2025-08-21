@@ -12,8 +12,11 @@ class MatrixRainPainter extends CustomPainter {
   final double feedbackIntensity;
   final MatrixFillerStyle fillerStyle;
   final MatrixFillerColor fillerColor;
-  final MatrixGlowStyle glowStyle;
   final MatrixLeadingColor leadingColor;
+  final MatrixGlowIntensity glowIntensitySetting;
+  final bool isSearching;
+  final MatrixFontSize fontSizeSetting;
+  final MatrixFontWeight fontWeightSetting;
   final _textPainter = TextPainter(textDirection: TextDirection.ltr);
 
   static const _palettes = {
@@ -50,8 +53,11 @@ class MatrixRainPainter extends CustomPainter {
     required this.feedbackIntensity,
     required this.fillerStyle,
     required this.fillerColor,
-    required this.glowStyle,
     required this.leadingColor,
+    required this.glowIntensitySetting,
+    required this.isSearching,
+    required this.fontSizeSetting,
+    required this.fontWeightSetting,
   });
 
   List<Color> _generateFillerShades(Color baseColor) {
@@ -61,13 +67,40 @@ class MatrixRainPainter extends CustomPainter {
     });
   }
 
+  double _getIntensityMultiplier() {
+    switch (glowIntensitySetting) {
+      case MatrixGlowIntensity.half: return 0.5;
+      case MatrixGlowIntensity.double: return 2.0;
+      case MatrixGlowIntensity.normal:
+      default: return 1.0;
+    }
+  }
+
+  double _getFontSize() {
+    switch (fontSizeSetting) {
+      case MatrixFontSize.small: return 12.0;
+      case MatrixFontSize.large: return 20.0;
+      case MatrixFontSize.medium:
+      default: return 16.0;
+    }
+  }
+
+  FontWeight _getFontWeight() {
+    return fontWeightSetting == MatrixFontWeight.bold ? FontWeight.bold : FontWeight.normal;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     for (final column in columns) {
+      if (isSearching && !column.isHighlighted) {
+        continue;
+      }
+
       if (column.rippleEffect > 0) _drawRippleEffect(canvas, column);
       for (int i = 0; i < column.characters.length; i++) {
-        final yOffset = column.yPosition + (i * MatrixRainColumn.textHeight);
-        if (yOffset + MatrixRainColumn.textHeight < 0 || yOffset > size.height) continue;
+        final yOffset = column.yPosition + (i * column.textHeight);
+        if (yOffset + column.textHeight < 0 || yOffset > size.height) continue;
+
         if (i == column.characters.length - 1) {
           _paintLeadingCharacter(canvas, column, yOffset, size);
         } else {
@@ -79,29 +112,26 @@ class MatrixRainPainter extends CustomPainter {
 
   void _paintLeadingCharacter(Canvas canvas, MatrixRainColumn column, double yOffset, Size size) {
     Color charColor;
-    double fontSize = 16;
+    double fontSize;
     List<Shadow> shadows = [];
-    final baseHighlightColor = _palettes[colorTheme]![(_palettes[colorTheme]!.length * 0.8).floor()];
+    final intensityMultiplier = _getIntensityMultiplier();
+    final baseFontSize = _getFontSize();
 
     if (column.isCurrentlyPlaying) {
       charColor = Colors.yellow;
-      fontSize = 18;
-      if (glowStyle != MatrixGlowStyle.none) {
-        final glow = column.glowIntensity * feedbackIntensity;
-        shadows = [Shadow(color: Colors.yellow.withOpacity(0.8 * glow), blurRadius: 15 * glow), Shadow(color: Colors.orange.withOpacity(0.6 * glow), blurRadius: 8 * glow)];
-      }
-    } else if (column.isHighlighted) {
-      charColor = baseHighlightColor;
-      fontSize = 17;
-      if (glowStyle != MatrixGlowStyle.none) {
-        final glow = feedbackIntensity;
-        shadows = [Shadow(color: baseHighlightColor.withOpacity(0.8 * glow), blurRadius: 12 * glow), Shadow(color: Colors.white.withOpacity(0.2 * glow), blurRadius: 6 * glow)];
-      }
+      fontSize = baseFontSize * 1.1;
+      final glow = column.glowIntensity * feedbackIntensity;
+      shadows = [
+        Shadow(color: Colors.yellow.withOpacity(0.9 * glow), blurRadius: 25 * glow * intensityMultiplier),
+        Shadow(color: Colors.orange.withOpacity(0.7 * glow), blurRadius: 40 * glow * intensityMultiplier)
+      ];
     } else {
       charColor = _leadingColorMap[leadingColor]!;
-      if (glowStyle == MatrixGlowStyle.all) {
-        shadows = [Shadow(color: charColor.withOpacity(0.8), blurRadius: 8)];
-      }
+      fontSize = baseFontSize;
+      shadows = [
+        Shadow(color: charColor.withOpacity(0.9), blurRadius: 12 * intensityMultiplier),
+        Shadow(color: charColor.withOpacity(0.5), blurRadius: 20 * intensityMultiplier)
+      ];
     }
 
     final screenThird = size.height / 3;
@@ -126,45 +156,52 @@ class MatrixRainPainter extends CustomPainter {
     }
 
     Color charColor;
+    final intensityMultiplier = _getIntensityMultiplier();
 
-    if (isFiller) {
-      final cIndex = (shades.length - 1) - (index % shades.length);
-      charColor = shades[cIndex];
-    } else {
-      switch (titleStyle) {
-        case MatrixTitleStyle.random:
-          final cIndex = (shades.length - 1) - (index % shades.length);
-          charColor = shades[cIndex];
-          break;
-        case MatrixTitleStyle.gradient:
-          final gradPos = (index - 1) / (column.characters.length - 3).clamp(1, double.infinity);
-          final cIndex = (gradPos * (shades.length - 1)).round().clamp(0, shades.length - 1);
-          charColor = shades[cIndex];
-          break;
-        case MatrixTitleStyle.solid:
-          charColor = shades[(shades.length * 0.7).floor()];
-          break;
-      }
+    switch (titleStyle) {
+      case MatrixTitleStyle.random:
+        final cIndex = (shades.length - 1) - (index % shades.length);
+        charColor = shades[cIndex];
+        break;
+
+      case MatrixTitleStyle.gradient:
+        final gradPos = index / (column.characters.length - 2).clamp(1, double.infinity);
+        final cIndex = (gradPos * (shades.length - 1)).round().clamp(0, shades.length - 1);
+        charColor = shades[cIndex];
+        break;
+
+      case MatrixTitleStyle.solid:
+        charColor = shades[(shades.length * 0.7).floor()];
+        break;
     }
 
     List<Shadow> shadows = [];
     if (!isFiller) {
-      if (glowStyle == MatrixGlowStyle.all) {
-        shadows = [Shadow(color: charColor.withOpacity(0.6), blurRadius: 4)];
-      } else if (glowStyle == MatrixGlowStyle.current) {
-        if (column.isHighlighted) shadows = [Shadow(color: charColor.withOpacity(0.6 * feedbackIntensity), blurRadius: 4)];
-        else if (column.isCurrentlyPlaying) {
-          final glow = column.glowIntensity * feedbackIntensity;
-          shadows = [Shadow(color: charColor.withOpacity(0.4 * glow), blurRadius: 6 * glow)];
-        }
+      if (column.isCurrentlyPlaying) {
+        final glow = column.glowIntensity * feedbackIntensity;
+        shadows = [Shadow(color: charColor.withOpacity(0.6 * glow), blurRadius: 10 * glow * intensityMultiplier)];
+      }
+      else {
+        shadows = [
+          Shadow(color: charColor.withOpacity(0.8), blurRadius: 8 * intensityMultiplier),
+          Shadow(color: charColor.withOpacity(0.4), blurRadius: 16 * intensityMultiplier)
+        ];
       }
     }
-    _paintChar(canvas, column.characters[index], column.xPosition, yOffset, charColor, 16, FontWeight.normal, shadows, column.rippleEffect);
+    _paintChar(canvas, column.characters[index], column.xPosition, yOffset, charColor, _getFontSize(), _getFontWeight(), shadows, column.rippleEffect);
   }
 
   void _paintChar(Canvas canvas, String char, double x, double y, Color color, double fontSize, FontWeight weight, List<Shadow> shadows, double rippleEffect) {
     if (rippleEffect > 0) color = Color.lerp(color, Colors.white, rippleEffect * 0.5 * feedbackIntensity) ?? color;
-    _textPainter.text = TextSpan(style: TextStyle(fontFamily: 'monospace', fontSize: fontSize, color: color, fontWeight: weight, shadows: shadows), text: char);
+    _textPainter.text = TextSpan(
+        style: TextStyle(
+          fontFamily: 'monospace',
+          fontSize: fontSize,
+          color: color,
+          fontWeight: weight,
+          shadows: shadows,
+        ),
+        text: char);
     _textPainter.layout();
     _textPainter.paint(canvas, Offset(x, y));
   }

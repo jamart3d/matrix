@@ -10,4 +10,5 @@ class Routes {
   static const String trackPlaylistPage = '/song_playlist_page';
   static const String matrixRainPage = '/matrix_rain_page';
   static const String settingsPage = '/settings_page';
+  static const String aboutPage = '/about_page';
 }

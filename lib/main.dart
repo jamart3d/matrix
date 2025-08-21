@@ -2,6 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:matrix/pages/about_page.dart';
 import 'package:matrix/pages/albums_list_wheel_page.dart';
 import 'package:matrix/pages/albums_page.dart';
 import 'package:matrix/pages/matrix_rain_page.dart';
@@ -187,6 +188,6 @@ Map<String, WidgetBuilder> _buildRoutes() {
     Routes.matrixRainPage: (context) => const MatrixRainPage(),
     Routes.settingsPage: (context) => const SettingsPage(),
     Routes.matrixMusicPlayerPage: (context) => const MatrixMusicPlayerPage(),
+    Routes.aboutPage: (context) => const AboutPage(),
   };
 }
-

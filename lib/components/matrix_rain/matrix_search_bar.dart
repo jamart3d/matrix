@@ -37,7 +37,8 @@ class MatrixSearchBar extends StatelessWidget {
               focusNode: focusNode,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Search venues...',
+                // --- UPDATED: Hint text is more helpful ---
+                hintText: 'Search venues or year (e.g., 77)...',
                 hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
                 prefixIcon: const Icon(Icons.search, color: Colors.green),
                 border: InputBorder.none,

@@ -1,7 +1,8 @@
 // lib/pages/matrix_music_player_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:matrix/components/player/progress_bar.dart';
+// --- MODIFIED IMPORT ---
+import 'package:matrix/components/player/themed_progress_bar.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/utils/duration_formatter.dart';
@@ -17,6 +18,7 @@ class MatrixMusicPlayerPage extends StatefulWidget {
 }
 
 class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
+  // ... (all the existing state and methods remain the same)
   final ScrollController _scrollController = ScrollController();
   int _lastScrolledIndex = -1;
 
@@ -49,6 +51,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
 
   void _scrollToCurrent(int index, {bool initial = false}) {
     if (_scrollController.hasClients && index >= 0) {
+      _lastScrolledIndex = index;
       const itemHeight = 56.0;
       final targetOffset = (index * itemHeight) - (MediaQuery.of(context).size.height / 4);
       final maxScroll = _scrollController.position.maxScrollExtent;
@@ -65,27 +68,11 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
     }
   }
 
-  Color _getThemeColor(MatrixColorTheme theme) {
-    switch (theme) {
-      case MatrixColorTheme.cyanBlue:
-        return Colors.cyan;
-      case MatrixColorTheme.purpleMatrix:
-        return Colors.purpleAccent;
-      case MatrixColorTheme.redAlert:
-        return Colors.redAccent;
-      case MatrixColorTheme.goldLux:
-        return Colors.amber;
-      case MatrixColorTheme.classicGreen:
-      default:
-        return Colors.green;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final trackPlayerProvider = context.watch<TrackPlayerProvider>();
     final settingsProvider = context.watch<AlbumSettingsProvider>();
-    final themeColor = _getThemeColor(settingsProvider.matrixColorTheme);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -135,9 +122,9 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
           Column(
             children: [
               if (settingsProvider.showBufferInfo)
-                _buildBufferInfoPanel(trackPlayerProvider, themeColor),
+                _buildBufferInfoPanel(trackPlayerProvider),
               Expanded(
-                child: _buildTrackList(context, trackPlayerProvider, themeColor),
+                child: _buildTrackList(context, trackPlayerProvider),
               ),
               Container(
                 padding: const EdgeInsets.all(16.0).copyWith(bottom: 24.0),
@@ -145,7 +132,14 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ProgressBar(provider: trackPlayerProvider),
+                    // --- WIDGET CHANGE HERE ---
+                    ThemedProgressBar(
+                      provider: trackPlayerProvider,
+                      activeColor: Colors.green,
+                      shadowColor: Colors.greenAccent,
+                      bufferColor: Colors.green.withOpacity(0.3),
+                      overlayColor: Colors.greenAccent.withOpacity(0.2),
+                    ),
                     const SizedBox(height: 16.0),
                     _buildPlayerControls(trackPlayerProvider),
                   ],
@@ -157,8 +151,9 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
       ),
     );
   }
+  // ... (the rest of the file remains the same)
 
-  Widget _buildBufferInfoPanel(TrackPlayerProvider provider, Color themeColor) {
+  Widget _buildBufferInfoPanel(TrackPlayerProvider provider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: Colors.black.withOpacity(0.4),
@@ -170,13 +165,13 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
             final bufferHealth = provider.getCurrentBufferHealth();
             return Row(
               children: [
-                Expanded(child: Text('Status: ${stateSnapshot.data?.name ?? "idle"}', style: TextStyle(color: themeColor, fontSize: 12))),
+                Expanded(child: Text('Status: ${stateSnapshot.data?.name ?? "idle"}', style: const TextStyle(color: Colors.green, fontSize: 12))),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Buffer Health: ${bufferHealth.toStringAsFixed(1)}%', style: TextStyle(color: _getBufferHealthColor(bufferHealth, themeColor), fontSize: 12)),
-                      LinearProgressIndicator(value: bufferHealth / 100, backgroundColor: Colors.grey[700], valueColor: AlwaysStoppedAnimation<Color>(_getBufferHealthColor(bufferHealth, themeColor))),
+                      Text('Buffer Health: ${bufferHealth.toStringAsFixed(1)}%', style: TextStyle(color: _getBufferHealthColor(bufferHealth), fontSize: 12)),
+                      LinearProgressIndicator(value: bufferHealth / 100, backgroundColor: Colors.grey[700], valueColor: AlwaysStoppedAnimation<Color>(_getBufferHealthColor(bufferHealth))),
                     ],
                   ),
                 ),
@@ -188,14 +183,14 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
     );
   }
 
-  Color _getBufferHealthColor(double health, Color themeColor) {
-    if (health >= 80) return themeColor; // Use theme color for "good"
+  Color _getBufferHealthColor(double health) {
+    if (health >= 80) return Colors.greenAccent;
     if (health >= 50) return Colors.yellow;
     if (health >= 20) return Colors.orange;
     return Colors.red;
   }
 
-  Widget _buildTrackList(BuildContext context, TrackPlayerProvider provider, Color themeColor) {
+  Widget _buildTrackList(BuildContext context, TrackPlayerProvider provider) {
     final playlist = provider.playlist;
     final currentIndex = provider.currentIndex;
     final settings = context.read<AlbumSettingsProvider>();
@@ -215,9 +210,9 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
           final track = playlist[index];
           final isCurrentlyPlaying = index == currentIndex;
           return ListTile(
-            title: Text(track.trackName, softWrap: false, overflow: TextOverflow.ellipsis, style: TextStyle(color: isCurrentlyPlaying ? themeColor : Colors.white, fontWeight: FontWeight.bold)),
-            leading: Text(track.trackNumber, style: TextStyle(color: isCurrentlyPlaying ? themeColor.withOpacity(0.8) : Colors.white70)),
-            trailing: Text(formatDurationSeconds(track.trackDuration), style: TextStyle(color: isCurrentlyPlaying ? themeColor.withOpacity(0.8) : Colors.white70)),
+            title: Text(track.trackName, softWrap: false, overflow: TextOverflow.ellipsis, style: TextStyle(color: isCurrentlyPlaying ? Colors.green : Colors.white, fontWeight: FontWeight.bold)),
+            leading: Text(track.trackNumber, style: TextStyle(color: isCurrentlyPlaying ? Colors.green.withOpacity(0.8) : Colors.white70)),
+            trailing: Text(formatDurationSeconds(track.trackDuration), style: TextStyle(color: isCurrentlyPlaying ? Colors.green.withOpacity(0.8) : Colors.white70)),
             onTap: () {
               if (!isCurrentlyPlaying) {
                 provider.seekToIndex(index);
@@ -249,41 +244,25 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
   }
 
   Widget _buildPlayPauseButton(TrackPlayerProvider provider) {
-    const heroTag = 'matrix_play_pause_hero';
-    final settingsProvider = context.read<AlbumSettingsProvider>();
-    final themeColor = _getThemeColor(settingsProvider.matrixColorTheme);
-
     if (provider.isLoading) {
-      return Hero(
-        tag: heroTag,
-        child: Material(
-          color: Colors.transparent,
+      return const SizedBox(
+        width: 64.0, height: 64.0,
+        child: Center(
           child: SizedBox(
-            width: 64.0, height: 64.0,
-            child: Center(
-              child: SizedBox(
-                width: 48.0, height: 48.0,
-                child: CircularProgressIndicator(strokeWidth: 3.0, valueColor: AlwaysStoppedAnimation<Color>(themeColor)),
-              ),
-            ),
+            width: 48.0, height: 48.0,
+            child: CircularProgressIndicator(strokeWidth: 3.0, valueColor: AlwaysStoppedAnimation<Color>(Colors.green)),
           ),
         ),
       );
     }
 
-    return Hero(
-      tag: heroTag,
-      child: Material(
-        color: Colors.transparent,
-        child: IconButton(
-          icon: Icon(
-            provider.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
-            size: 64.0,
-            color: themeColor,
-          ),
-          onPressed: provider.isPlaying ? provider.pause : provider.play,
-        ),
+    return IconButton(
+      icon: Icon(
+        provider.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+        size: 64.0,
+        color: Colors.green,
       ),
+      onPressed: provider.isPlaying ? provider.pause : provider.play,
     );
   }
 
@@ -298,10 +277,11 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage> {
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
             TextButton(
               onPressed: () async {
+                final navigator = Navigator.of(context);
                 Navigator.of(dialogContext).pop();
                 await provider.clearPlaylist();
                 if (mounted) {
-                  Navigator.of(context).pop();
+                  navigator.pop();
                 }
               },
               child: const Text('Clear', style: TextStyle(color: Colors.red)),

@@ -2,10 +2,8 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
-// =======================================================================
-// === VERIFY THIS IMPORT STATEMENT EXISTS AT THE TOP OF THE FILE      ===
+
 import 'package:matrix/helpers/album_helper.dart';
-// =======================================================================
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/utils/duration_formatter.dart';
 import 'package:provider/provider.dart';

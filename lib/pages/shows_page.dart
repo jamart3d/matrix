@@ -1,8 +1,9 @@
 // lib/pages/shows_page.dart
 
 import 'dart:ui';
-import 'package:flutter/foundation.dart';
+// import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:matrix/components/animated_playing_fab.dart';
 import 'package:matrix/helpers/shows_helper.dart';
 import 'package:matrix/models/show.dart';
 import 'package:matrix/models/track.dart';
@@ -14,9 +15,7 @@ import 'package:matrix/components/year_scrollbar.dart';
 import 'package:provider/provider.dart';
 import 'package:matrix/components/my_drawer.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:logger/logger.dart';
-
-final _logger = Logger();
+import 'package:matrix/routes.dart';
 
 class ShowsPage extends StatefulWidget {
   const ShowsPage({super.key});
@@ -28,7 +27,6 @@ class ShowsPage extends StatefulWidget {
 class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixin {
   late final Future<List<Show>> _showsFuture;
   List<Show> _originalShows = [];
-  List<Show> _sortedShows = [];
   String? _currentShowName;
   String? _currentSourceShnid;
   bool _showDeepLinkMessage = false;
@@ -45,10 +43,8 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     _showsFuture = loadShowsData();
     _showsFuture.then((shows) {
       if (mounted) {
-        final settings = context.read<AlbumSettingsProvider>();
         setState(() {
           _originalShows = shows;
-          _sortAndRefreshShows(settings.showSortOrder);
         });
       }
     });
@@ -58,16 +54,12 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   void didChangeDependencies() {
     super.didChangeDependencies();
     final playerProvider = context.watch<TrackPlayerProvider>();
-    final settingsProvider = context.watch<AlbumSettingsProvider>();
 
-    // **** THIS IS THE FIX ****
-    // Check for the specific deep link flag and consume it
     if (playerProvider.wasInitiatedByDeepLink) {
-      playerProvider.consumeDeepLinkInitiation(); // Prevent it from showing again
+      playerProvider.consumeDeepLinkInitiation();
       _showDeepLinkNotification();
     }
 
-    _sortAndRefreshShows(settingsProvider.showSortOrder);
     final newShowName = playerProvider.currentAlbumTitle;
     final newShnid = playerProvider.currentTrack?.shnid;
 
@@ -79,7 +71,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _scrollToCurrentShow();
       });
-        }
+    }
   }
 
   void _showDeepLinkNotification() {
@@ -89,19 +81,44 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     });
   }
 
-  void _sortAndRefreshShows(ShowSortOrder sortOrder) {
-    final sorted = List<Show>.from(_originalShows);
-    sorted.sort((a, b) => (sortOrder == ShowSortOrder.dateDescending) ? b.date.compareTo(a.date) : a.date.compareTo(b.date));
-    if (!listEquals(_sortedShows, sorted)) {
-      setState(() => _sortedShows = sorted);
+  // --- MODIFIED: This method now depends on the currently filtered list ---
+  Future<void> _scrollToCurrentShow() async {
+    if (_currentShowName == null || !_itemScrollController.isAttached || _originalShows.isEmpty) return;
+
+    // We must filter the shows here as well to find the correct index in the visible list
+    final category = ModalRoute.of(context)?.settings.arguments as String?;
+    final filteredShows = _getFilteredShows(category);
+    final sortedShows = _getSortedShows(filteredShows, context.read<AlbumSettingsProvider>().showSortOrder);
+
+    final index = sortedShows.indexWhere((show) => show.name == _currentShowName);
+
+    if (index != -1) {
+      _itemScrollController.scrollTo(index: index, duration: const Duration(milliseconds: 700), curve: Curves.easeInOutCubic, alignment: 0.25);
     }
   }
 
-  Future<void> _scrollToCurrentShow() async {
-    if (_currentShowName == null || !_itemScrollController.isAttached || _sortedShows.isEmpty) return;
-    final index = _sortedShows.indexWhere((show) => show.name == _currentShowName);
-    if (index != -1) {
-      _itemScrollController.scrollTo(index: index, duration: const Duration(milliseconds: 700), curve: Curves.easeInOutCubic, alignment: 0.25);
+  // --- NEW HELPER FUNCTIONS FOR FILTERING AND SORTING ---
+  List<Show> _getFilteredShows(String? category) {
+    if (category == null) {
+      return _originalShows; // Return all shows
+    }
+    return _originalShows.where((show) => show.sourceCreator == category).toList();
+  }
+
+  List<Show> _getSortedShows(List<Show> shows, ShowSortOrder sortOrder) {
+    final sorted = List<Show>.from(shows);
+    sorted.sort((a, b) => (sortOrder == ShowSortOrder.dateDescending) ? b.date.compareTo(a.date) : a.date.compareTo(b.date));
+    return sorted;
+  }
+
+  String _getPageTitle(String? category) {
+    switch (category) {
+      case 'seamons': return "Seamons' matrix -> ";
+      case 'tobin': return "Tobin's matrix -> ";
+      case 'sirmick': return "random SirMick's matrix -> ";
+      case 'dusborne': return "random Dusborne's matrix -> ";
+      case 'misc': return "random misc maxtrix";
+      default: return "play a random show - >";
     }
   }
 
@@ -109,31 +126,43 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   Widget build(BuildContext context) {
     super.build(context);
     final playerProvider = context.watch<TrackPlayerProvider>();
+    final settingsProvider = context.watch<AlbumSettingsProvider>();
+
+    // --- ARGUMENT HANDLING AND DATA PREPARATION ---
+    final category = ModalRoute.of(context)?.settings.arguments as String?;
+    final pageTitle = _getPageTitle(category);
+
+    // Filter and sort the shows on every build to react to changes.
+    final filteredShows = _getFilteredShows(category);
+    final sortedShows = _getSortedShows(filteredShows, settingsProvider.showSortOrder);
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text("Select a random show -->"),
+        // --- UPDATED: Dynamic title ---
+        title: Text(pageTitle),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.question_mark),
             tooltip: 'Play Random Show',
             onPressed: () {
-              if (_originalShows.isNotEmpty) {
-                playRandomShow(playerProvider, _originalShows);
+              // --- UPDATED: Use the filtered list for random show selection ---
+              if (sortedShows.isNotEmpty) {
+                playRandomShow(playerProvider, sortedShows);
               }
             },
           ),
         ],
       ),
       drawer: const MyDrawer(),
-      floatingActionButton: _buildFloatingActionButton(playerProvider),
+      floatingActionButton: _buildFloatingActionButton(playerProvider, settingsProvider),
       body: Stack(
         fit: StackFit.expand,
         children: [
           _buildBlurredBackground(),
-          _buildShowsList(),
+          // --- UPDATED: Pass the final list to the builder method ---
+          _buildShowsList(sortedShows),
           if (_showDeepLinkMessage) _buildDeepLinkNotification(),
         ],
       ),
@@ -141,6 +170,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   Widget _buildDeepLinkNotification() {
+    // ... (This method is unchanged)
     return Positioned(
       top: 20,
       left: 20,
@@ -161,7 +191,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
               ),
             ],
           ),
-          child: Row(
+          child: const Row(
             children: [
               Icon(Icons.assistant, color: Colors.white),
               SizedBox(width: 12),
@@ -181,49 +211,32 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     );
   }
 
-  Widget? _buildFloatingActionButton(TrackPlayerProvider playerProvider) {
-    const heroTag = 'play_pause_button_hero';
-    if (playerProvider.isLoading) {
-      return FloatingActionButton(
-        heroTag: heroTag,
-        onPressed: null,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const SizedBox(
-          width: 50, height: 50,
-          child: CircularProgressIndicator(strokeWidth: 3.0, valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow)),
-        ),
-      );
-    }
-    if (playerProvider.currentTrack != null) {
-      return FloatingActionButton(
-        heroTag: heroTag,
-        onPressed: () {
-          Navigator.pushNamed(context, '/shows_music_player_page');
-        },
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const Icon(
-          Icons.play_circle_fill,
-          color: Colors.yellow,
-          shadows: [Shadow(color: Colors.redAccent, blurRadius: 4)],
-          size: 50,
-        ),
-      );
-    }
-    return null;
+  Widget _buildFloatingActionButton(TrackPlayerProvider playerProvider, AlbumSettingsProvider settingsProvider) {
+    // ... (This method is unchanged)
+    final isLarge = settingsProvider.fabSize == FabSize.large;
+    final double fabSize = isLarge ? 80.0 : 50.0;
+
+    return AnimatedPlayingFab(
+      heroTag: 'play_pause_button_hero_shows',
+      isLoading: playerProvider.isLoading,
+      isPlaying: playerProvider.isPlaying,
+      hasTrack: playerProvider.currentTrack != null,
+      themeColor: Colors.yellow,
+      size: fabSize,
+      onPressed: () => Navigator.pushNamed(context, Routes.showsMusicPlayerPage),
+    );
   }
 
   Widget _buildBlurredBackground() {
+    // ... (This method is unchanged)
     return Container(
       decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/t_steal.webp'), fit: BoxFit.cover)),
       child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), child: Container(color: Colors.black.withOpacity(0.3))),
     );
   }
 
-  // Updated _buildShowsList method in shows_page.dart
-
-  Widget _buildShowsList() {
+  // --- MODIFIED: This method now receives the list to build ---
+  Widget _buildShowsList(List<Show> showsToDisplay) {
     return FutureBuilder<List<Show>>(
       future: _showsFuture,
       builder: (context, snapshot) {
@@ -233,14 +246,14 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
         if (snapshot.hasError) {
           return Center(child: Text('Could not load shows. Error: ${snapshot.error}'));
         }
-        if (_sortedShows.isEmpty) {
-          return const Center(child: Text('No shows found.'));
+        if (showsToDisplay.isEmpty) {
+          return const Center(child: Text('No shows found for this category.', style: TextStyle(color: Colors.white, fontSize: 16)));
         }
 
         final settings = context.watch<AlbumSettingsProvider>();
         final playerProvider = context.read<TrackPlayerProvider>();
 
-        final showYears = _sortedShows
+        final showYears = showsToDisplay
             .map((show) => int.tryParse(show.year) ?? 0)
             .where((year) => year > 0)
             .toList();
@@ -248,8 +261,8 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
         Widget mainContent = ScrollablePositionedList.builder(
           itemScrollController: _itemScrollController,
           itemPositionsListener: _itemPositionsListener,
-          itemCount: _sortedShows.length,
-          itemBuilder: (context, index) => _buildShowTile(settings, playerProvider, _sortedShows[index]),
+          itemCount: showsToDisplay.length,
+          itemBuilder: (context, index) => _buildShowTile(settings, playerProvider, showsToDisplay[index]),
         );
 
         return SafeArea(
@@ -257,7 +270,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
               ? YearScrollbar(
             years: showYears,
             itemPositionsListener: _itemPositionsListener,
-            itemScrollController: _itemScrollController, // Now this will work!
+            itemScrollController: _itemScrollController,
             alwaysShow: settings.yearScrollbarBehavior == YearScrollbarBehavior.always,
             child: mainContent,
           )
@@ -268,13 +281,14 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   Widget _buildShowTile(AlbumSettingsProvider settings, TrackPlayerProvider playerProvider, Show show) {
+    // ... (This method is unchanged)
     final bool isCurrentShow = _currentSourceShnid != null && show.sources.containsKey(_currentSourceShnid);
     final titleStyle = TextStyle(color: isCurrentShow ? Colors.yellow : Colors.white, fontWeight: FontWeight.bold);
 
     return GestureDetector(
       onLongPress: () {
         playTracklist(playerProvider, show.primaryTracks);
-        Navigator.pushNamed(context, '/shows_music_player_page');
+        Navigator.pushNamed(context, Routes.showsMusicPlayerPage);
       },
       child: Card(
         color: isCurrentShow ? Colors.yellow.withOpacity(0.2) : Colors.black.withOpacity(0.4),
@@ -290,6 +304,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   List<Widget> _buildExpansionChildren(TrackPlayerProvider playerProvider, Show show) {
+    // ... (This method is unchanged)
     if (show.sourceCount == 1) {
       return show.sources.values.first.map((track) => _buildTrackTile(playerProvider, track, show.sources.values.first)).toList();
     } else {
@@ -307,6 +322,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   Widget _buildTrackTile(TrackPlayerProvider playerProvider, Track track, List<Track> sourceTracks) {
+    // ... (This method is unchanged)
     final bool isCurrentlyPlaying = playerProvider.currentTrack == track;
     return Container(
       color: isCurrentlyPlaying ? Colors.yellow.withOpacity(0.15) : Colors.transparent,
@@ -317,7 +333,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
         trailing: Text(formatDurationSeconds(track.trackDuration), style: TextStyle(color: isCurrentlyPlaying ? Colors.yellow.withOpacity(0.8) : Colors.grey.shade400)),
         onTap: () {
           playTracklistFrom(playerProvider, sourceTracks, track);
-          Navigator.pushNamed(context, '/shows_music_player_page');
+          Navigator.pushNamed(context, Routes.showsMusicPlayerPage);
         },
         dense: true,
       ),

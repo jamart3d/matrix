@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/utils/duration_formatter.dart';
-import 'package:matrix/components/player/progress_bar.dart';
+// --- MODIFIED IMPORT ---
+import 'package:matrix/components/player/themed_progress_bar.dart';
 import 'package:marquee/marquee.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -17,6 +18,7 @@ class ShowsMusicPlayerPage extends StatefulWidget {
 }
 
 class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
+  // ... (all the existing state and methods remain the same)
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -80,7 +82,6 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
         )
             : Text(trackPlayerProvider.currentAlbumTitle),
         actions: [
-          // --- THE FIX: The indicator has been removed from this list ---
           IconButton(
             icon: const Icon(Icons.delete_sweep),
             tooltip: 'Clear Playlist',
@@ -101,7 +102,14 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ProgressBar(provider: trackPlayerProvider),
+                // --- WIDGET CHANGE HERE ---
+                ThemedProgressBar(
+                  provider: trackPlayerProvider,
+                  activeColor: Colors.yellow,
+                  shadowColor: Colors.redAccent,
+                  bufferColor: Colors.yellow.withOpacity(0.3),
+                  overlayColor: Colors.redAccent.withOpacity(0.2),
+                ),
                 const SizedBox(height: 16.0),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -124,9 +132,10 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
       ),
     );
   }
+  // ... (the rest of the file remains the same)
 
   Widget _buildPlayPauseButton(TrackPlayerProvider provider) {
-    const heroTag = 'play_pause_button_hero';
+    const heroTag = 'play_pause_button_hero_shows';
 
     Widget loadingWidget = const SizedBox(
       width: 64.0, height: 64.0,
@@ -144,13 +153,7 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
         size: 64.0,
         color: Colors.yellow,
       ),
-      onPressed: () {
-        if (provider.isPlaying) {
-          provider.pause();
-        } else {
-          provider.play();
-        }
-      },
+      onPressed: provider.isPlaying ? provider.pause : provider.play,
     );
 
     return Hero(
@@ -195,15 +198,18 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
   Widget _buildTrackList(BuildContext context, TrackPlayerProvider trackPlayerProvider) {
     final playlist = trackPlayerProvider.playlist;
     final currentIndex = trackPlayerProvider.currentIndex;
+    final settings = context.read<AlbumSettingsProvider>();
 
     if (playlist.isEmpty) {
       return const Center(child: Text('Playlist is empty', style: TextStyle(color: Colors.white)));
     }
 
     return SafeArea(
-      top: false, bottom: false,
+      top: !settings.showBufferInfo,
+      bottom: false,
       child: ListView.builder(
         controller: _scrollController,
+        padding: EdgeInsets.only(top: settings.showBufferInfo ? 0 : 80),
         itemCount: playlist.length,
         itemBuilder: (context, index) {
           final track = playlist[index];

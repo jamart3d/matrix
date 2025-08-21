@@ -1,6 +1,7 @@
 // lib/components/my_drawer.dart
 
 import 'package:flutter/material.dart';
+// import 'package:matrix/pages/about_page.dart';
 import '../routes.dart';
 
 class MyDrawer extends StatelessWidget {
@@ -9,8 +10,8 @@ class MyDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: Container( // Wrap with a container for a solid background color
-        color: Colors.grey[900], // A dark background for the drawer body
+      child: Container(
+        color: Colors.grey[900],
         child: Column(
           children: [
             DrawerHeader(
@@ -26,7 +27,7 @@ class MyDrawer extends StatelessWidget {
                   Container(color: Colors.black.withOpacity(0.5)),
                   const Center(
                     child: Text(
-                      'Options',
+                      'matrix',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 32,
@@ -38,53 +39,83 @@ class MyDrawer extends StatelessWidget {
                 ],
               ),
             ),
-            // Drawer Body - Links
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
                   ListTile(
                     leading: const Icon(Icons.music_note, color: Colors.white70),
-                    title: const Text('Shows', style: TextStyle(color: Colors.white)),
+                    title: const Text('All Shows', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushReplacementNamed(context, Routes.showsPage);
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.album, color: Colors.white70),
-                    title: const Text('hunter\'s trix (List)', style: TextStyle(color: Colors.white)),
+                    leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
+                    title: const Text('Seamons mixes', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, Routes.albumsPage);
+                      // --- FIX: Correctly navigate to shows page with argument ---
+                      Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'seamons');
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.view_carousel, color: Colors.white70),
-                    title: const Text('Hunter\'s trix (Wheel)', style: TextStyle(color: Colors.white)),
+                    leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
+                    title: const Text("SirMick's mixes", style: TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'sirmick');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
+                    title: const Text("Dusborne's mixes", style: TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'dusborne');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.mic_none_rounded, color: Colors.white70),
+                    title: const Text("others", style: TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'misc');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.lightbulb_circle, color: Colors.white70),
+                    title: const Text('Wheel', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushReplacementNamed(context, Routes.albumsListWheelPage);
                     },
                   ),
                   const Divider(color: Colors.white24),
-
                   ListTile(
                     leading: const Icon(Icons.grain, color: Colors.green),
-                    title: const Text('select a matrix', style: TextStyle(color: Colors.white)),
+                    title: const Text('Select a matrix', style: TextStyle(color: Colors.white)),
                     onTap: () {
-                      Navigator.pop(context); // Close the drawer first
+                      Navigator.pop(context);
                       Navigator.pushNamed(context, Routes.matrixRainPage);
                     },
                   ),
                   const Divider(color: Colors.white24),
-
                   ListTile(
                     leading: const Icon(Icons.settings, color: Colors.white70),
                     title: const Text('Settings', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, Routes.settingsPage);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline, color: Colors.white70),
+                    title: const Text('About', style: TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, Routes.aboutPage);
                     },
                   ),
                 ],
