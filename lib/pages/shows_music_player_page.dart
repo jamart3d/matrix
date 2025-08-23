@@ -5,10 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/utils/duration_formatter.dart';
-// --- MODIFIED IMPORT ---
-import 'package:matrix/components/player/themed_progress_bar.dart';
+import 'package:matrix/components/player/themed_shows_progress_bar.dart';
+import 'package:matrix/components/player/buffer_info_panel.dart';
 import 'package:marquee/marquee.dart';
-import 'package:just_audio/just_audio.dart';
 
 class ShowsMusicPlayerPage extends StatefulWidget {
   const ShowsMusicPlayerPage({super.key});
@@ -18,7 +17,6 @@ class ShowsMusicPlayerPage extends StatefulWidget {
 }
 
 class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
-  // ... (all the existing state and methods remain the same)
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -92,7 +90,9 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
       body: Column(
         children: [
           if (settingsProvider.showBufferInfo)
-            _buildBufferInfoPanel(trackPlayerProvider),
+            BufferInfoPanel(
+              provider: trackPlayerProvider,
+            ),
           Expanded(
             child: _buildTrackList(context, trackPlayerProvider),
           ),
@@ -102,14 +102,7 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // --- WIDGET CHANGE HERE ---
-                ThemedProgressBar(
-                  provider: trackPlayerProvider,
-                  activeColor: Colors.yellow,
-                  shadowColor: Colors.redAccent,
-                  bufferColor: Colors.yellow.withOpacity(0.3),
-                  overlayColor: Colors.redAccent.withOpacity(0.2),
-                ),
+                ThemedShowsProgressBar(provider: trackPlayerProvider),
                 const SizedBox(height: 16.0),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -132,7 +125,6 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
       ),
     );
   }
-  // ... (the rest of the file remains the same)
 
   Widget _buildPlayPauseButton(TrackPlayerProvider provider) {
     const heroTag = 'play_pause_button_hero_shows';
@@ -161,36 +153,6 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
       child: Material(
         color: Colors.transparent,
         child: provider.isLoading ? loadingWidget : playPauseWidget,
-      ),
-    );
-  }
-
-  Widget _buildBufferInfoPanel(TrackPlayerProvider provider) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.grey[900]?.withOpacity(0.5),
-      child: SafeArea(
-        top: true, bottom: false,
-        child: StreamBuilder<ProcessingState>(
-          stream: provider.processingStateStream,
-          builder: (context, stateSnapshot) {
-            final bufferHealth = provider.getCurrentBufferHealth();
-            return Row(
-              children: [
-                Expanded(child: Text('Status: ${stateSnapshot.data?.name ?? "idle"}', style: const TextStyle(color: Colors.yellow, fontSize: 12))),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Buffer Health: ${bufferHealth.toStringAsFixed(1)}%', style: TextStyle(color: _getBufferHealthColor(bufferHealth), fontSize: 12)),
-                      LinearProgressIndicator(value: bufferHealth / 100, backgroundColor: Colors.grey[700], valueColor: AlwaysStoppedAnimation<Color>(_getBufferHealthColor(bufferHealth))),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
       ),
     );
   }
@@ -229,13 +191,6 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
         },
       ),
     );
-  }
-
-  Color _getBufferHealthColor(double health) {
-    if (health >= 80) return Colors.green;
-    if (health >= 50) return Colors.yellow;
-    if (health >= 20) return Colors.orange;
-    return Colors.red;
   }
 
   void _showClearPlaylistDialog(BuildContext context, TrackPlayerProvider provider) {

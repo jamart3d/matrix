@@ -1,9 +1,8 @@
 // lib/components/matrix_rain/matrix_rain_painter.dart
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:matrix/components/matrix_rain/matrix_rain_column.dart';
-import 'package:matrix/providers/album_settings_provider.dart';
+import 'package:matrix/providers/enums.dart';
 
 class MatrixRainPainter extends CustomPainter {
   final List<MatrixRainColumn> columns;

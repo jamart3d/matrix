@@ -2,7 +2,7 @@
 
 import 'dart:math';
 import 'dart:ui';
-import 'package:matrix/providers/album_settings_provider.dart';
+import 'package:matrix/providers/enums.dart';
 
 class MatrixRainColumn {
   final double textHeight;

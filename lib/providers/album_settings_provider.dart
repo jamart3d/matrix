@@ -1,24 +1,10 @@
 // lib/providers/album_settings_provider.dart
 
 import 'package:flutter/material.dart';
+import 'package:matrix/providers/enums.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 
-// --- ENUMS for settings choices ---
-enum ShowSortOrder { dateDescending, dateAscending }
-enum YearScrollbarBehavior { onScroll, always, off }
-enum MatrixColorTheme { classicGreen, cyanBlue, purpleMatrix, redAlert, goldLux }
-enum MatrixTitleStyle { random, gradient, solid }
-enum MatrixFillerStyle { dimmed, themed, invisible }
-enum MatrixFillerColor { defaultGray, green, cyan, purple, red, gold, white }
-enum StartupPage { shows, albums, matrix }
-enum MatrixGlowIntensity { half, normal, double }
-enum MatrixLeadingColor { white, green, cyan, purple, red, gold }
-enum MatrixStepMode { smooth, stepped, chunky }
-enum MatrixLaneSpacing { standard, tight, overlap }
-enum FabSize { normal, large }
-enum MatrixFontWeight { normal, bold }
-enum MatrixFontSize { small, medium, large }
 
 class AlbumSettingsProvider with ChangeNotifier {
   final _logger = Logger();
@@ -60,24 +46,24 @@ class AlbumSettingsProvider with ChangeNotifier {
   ShowSortOrder _showSortOrder = ShowSortOrder.dateDescending;
   bool _marqueePlayerTitle = true;
   bool _displayAlbumReleaseNumber = false;
-  double _matrixRainSpeed = 1.0;
-  bool _showBufferInfo = false;
-  MatrixGlowIntensity _matrixGlowIntensity = MatrixGlowIntensity.normal;
+  double _matrixRainSpeed = 6.0;
+  bool _showBufferInfo = true;
+  MatrixGlowIntensity _matrixGlowIntensity = MatrixGlowIntensity.double;
   bool _matrixRippleEffects = true;
-  MatrixTitleStyle _matrixTitleStyle = MatrixTitleStyle.random;
+  MatrixTitleStyle _matrixTitleStyle = MatrixTitleStyle.gradient;
   MatrixColorTheme _matrixColorTheme = MatrixColorTheme.classicGreen;
   int _matrixColumnLimit = 50;
   double _matrixFeedbackIntensity = 1.0;
-  MatrixFillerStyle _matrixFillerStyle = MatrixFillerStyle.dimmed;
+  MatrixFillerStyle _matrixFillerStyle = MatrixFillerStyle.themed;
   MatrixFillerColor _matrixFillerColor = MatrixFillerColor.defaultGray;
   MatrixLeadingColor _matrixLeadingColor = MatrixLeadingColor.white;
-  bool _matrixChaoticLeading = false;
+  bool _matrixChaoticLeading = true;
   MatrixStepMode _matrixStepMode = MatrixStepMode.stepped;
   MatrixLaneSpacing _matrixLaneSpacing = MatrixLaneSpacing.standard;
   bool _matrixAllowOverlap = false;
   FabSize _fabSize = FabSize.normal;
   MatrixFontWeight _matrixFontWeight = MatrixFontWeight.normal;
-  MatrixFontSize _matrixFontSize = MatrixFontSize.medium;
+  MatrixFontSize _matrixFontSize = MatrixFontSize.large;
   bool _isGeneralExpanded = true;
   bool _isShowsExpanded = true;
   bool _isPlayerExpanded = true;

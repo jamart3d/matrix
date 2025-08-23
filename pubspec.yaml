@@ -4,7 +4,7 @@ description: "a list of matrix's and just_audio to play them from archive.org"
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 
-version: 1.0.63+17
+version: 1.0.66+17
 
 environment:
   sdk: '>=3.4.3 <4.0.0'
@@ -29,6 +29,7 @@ dependencies:
   url_launcher: ^6.3.1
   marquee: ^2.2.3
   app_links: ^3.4.5
+  flutter_native_splash: ^2.4.4
 
 dev_dependencies:
   flutter_test:
@@ -47,4 +48,23 @@ flutter:
     - assets/audio/
     - assets/audio/HunterTrix105/
     - assets/images/trix_album_art/
+    - assets/images/matrix_black_1k.png
+    - assets/images/icon_foreground.png
+
+flutter_native_splash:
+  # The background color for the splash screen.
+  color: "#000000"
+
+  # --- For Older Android & iOS ---
+  # Use your full splash screen design here.
+  image: assets/images/matrix_black_1k.png
+
+  # --- For Modern Android (Android 12+) ---
+  android_12:
+    # Use the same clean, transparent foreground icon you made for your launcher icon.
+    # This ensures consistency between your splash screen and your app icon.
+    image: assets/images/icon_foreground.png
+
+    # The background color for the splash screen on Android 12+.
+    color: "#000000"
 

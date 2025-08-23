@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:matrix/components/my_drawer.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:matrix/routes.dart';
+import 'package:matrix/providers/enums.dart';
 
 class ShowsPage extends StatefulWidget {
   const ShowsPage({super.key});
@@ -308,7 +309,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   Widget _buildTrackTile(TrackPlayerProvider playerProvider, Track track, List<Track> sourceTracks) {
-    // ... (This method is unchanged)
     final bool isCurrentlyPlaying = playerProvider.currentTrack == track;
     return Container(
       color: isCurrentlyPlaying ? Colors.yellow.withOpacity(0.15) : Colors.transparent,

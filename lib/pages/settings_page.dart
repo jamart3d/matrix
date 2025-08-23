@@ -1,9 +1,9 @@
 // lib/pages/settings_page.dart
 
 import 'package:flutter/material.dart';
-// --- REMOVED 'about_page.dart' import as it's no longer needed here ---
 import 'package:provider/provider.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
+import 'package:matrix/providers/enums.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});

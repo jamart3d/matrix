@@ -7,10 +7,8 @@ import 'package:matrix/pages/albums_list_wheel_page.dart';
 import 'package:matrix/pages/albums_page.dart';
 import 'package:matrix/pages/matrix_rain_page.dart';
 import 'package:matrix/pages/matrix_music_player_page.dart';
-import 'package:matrix/pages/music_player_page.dart';
 import 'package:matrix/pages/settings_page.dart';
 import 'package:matrix/pages/shows_page.dart';
-import 'package:matrix/pages/track_playlist_page.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -24,6 +22,8 @@ import 'package:app_links/app_links.dart';
 import 'helpers/shows_helper.dart';
 import 'services/navigation_service.dart';
 import 'package:matrix/routes.dart';
+import 'package:matrix/pages/music_player_page.dart';
+import 'package:matrix/pages/track_playlist_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -181,13 +181,13 @@ Map<String, WidgetBuilder> _buildRoutes() {
   return {
     Routes.showsPage: (context) => const ShowsPage(),
     Routes.albumsPage: (context) => const AlbumsPage(),
-    Routes.musicPlayerPage: (context) => const MusicPlayerPage(),
     Routes.showsMusicPlayerPage: (context) => const ShowsMusicPlayerPage(),
-    Routes.trackPlaylistPage: (context) => const TrackPlaylistPage(),
     Routes.albumsListWheelPage: (context) => const AlbumListWheelPage(),
     Routes.matrixRainPage: (context) => const MatrixRainPage(),
     Routes.settingsPage: (context) => const SettingsPage(),
     Routes.matrixMusicPlayerPage: (context) => const MatrixMusicPlayerPage(),
     Routes.aboutPage: (context) => const AboutPage(),
+    Routes.musicPlayerPage: (context) => const MusicPlayerPage(),
+    Routes.trackPlaylistPage: (context) => const TrackPlaylistPage(),
   };
 }
