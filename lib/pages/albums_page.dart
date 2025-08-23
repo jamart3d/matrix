@@ -2,6 +2,7 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:matrix/components/animated_playing_fab.dart';
 import 'package:matrix/components/my_drawer.dart';
 import 'package:matrix/helpers/album_helper.dart';
 import 'package:matrix/models/album.dart';
@@ -13,6 +14,8 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/helpers/archive_alive_helper.dart';
 import 'package:logger/logger.dart';
+import 'package:matrix/providers/enums.dart';
+import 'package:matrix/routes.dart';
 
 class AlbumsPage extends StatefulWidget {
   const AlbumsPage({super.key});
@@ -23,9 +26,7 @@ class AlbumsPage extends StatefulWidget {
 
 class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMixin {
   static final Logger _logger = Logger(printer: PrettyPrinter(methodCount: 1));
-
   late final Future<void> _initializationFuture;
-
   String _currentAlbumArt = 'assets/images/t_steal.webp';
   String? _currentAlbumName;
   bool _isPageOffline = false;
@@ -54,7 +55,6 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
   void _onDataLoaded() {
     if (!_connectionChecked) {
       _checkConnection();
-      // This now correctly calls the function from album_helper.dart
       preloadAlbumImages(AlbumDataService().albums, context);
       _connectionChecked = true;
     }
@@ -62,7 +62,6 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
 
   void _updateCurrentAlbumFromProvider(TrackPlayerProvider trackPlayerProvider) {
     final currentlyPlayingSong = trackPlayerProvider.currentTrack;
-
     if (currentlyPlayingSong == null && _currentAlbumName != null) {
       setState(() {
         _currentAlbumName = null;
@@ -70,11 +69,9 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
       });
       return;
     }
-
     if (currentlyPlayingSong != null) {
       final newAlbumArt = trackPlayerProvider.currentAlbumArt;
       final newAlbumName = currentlyPlayingSong.albumName;
-
       if (newAlbumArt != _currentAlbumArt || newAlbumName != _currentAlbumName) {
         setState(() {
           _currentAlbumArt = newAlbumArt;
@@ -117,10 +114,8 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
           }
-
           final albums = AlbumDataService().albums;
           WidgetsBinding.instance.addPostFrameCallback((_) => _onDataLoaded());
-
           return _buildBodyContent(albums);
         },
       ),
@@ -156,7 +151,6 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
 
   Widget _buildBodyContent(List<Album> albums) {
     final Color effectiveBackdropColor = _currentAlbumName == null ? Colors.black.withOpacity(0.7) : _backdropColor;
-
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
@@ -340,13 +334,11 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
   Future<void> _handleConnectionError() async {
     final albums = AlbumDataService().albums;
     final offlineAlbumIndex = albums.indexWhere((album) => album.releaseNumber == 105);
-
     if (offlineAlbumIndex == -1) {
       _showErrorSnackBar('Offline album data (Release 105) not found.');
       return;
     }
     final offlineAlbum = albums[offlineAlbumIndex];
-
     setState(() => _backdropColor = Colors.red.withOpacity(0.5));
     context.read<AlbumSettingsProvider>().setDisplayAlbumReleaseNumber(true);
     await playAlbumFromTracks(offlineAlbum.tracks);
@@ -364,28 +356,26 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
 
   Widget? _buildFloatingActionButton() {
     final playerProvider = context.watch<TrackPlayerProvider>();
-    if (playerProvider.isLoading) {
-      return FloatingActionButton(
-        onPressed: null,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const SizedBox(
-          width: 50, height: 50,
-          child: CircularProgressIndicator(strokeWidth: 3.0, valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow)),
-        ),
-      );
-    }
-    if (playerProvider.currentTrack != null) {
-      return FloatingActionButton(
-        onPressed: () {
-          _scrollToCurrentAlbum();
-          Navigator.pushNamed(context, '/music_player_page');
-        },
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const Icon(Icons.play_circle_fill, color: Colors.yellow, shadows: [Shadow(color: Colors.redAccent, blurRadius: 4)], size: 50),
-      );
-    }
-    return null;
+    final settingsProvider = context.watch<AlbumSettingsProvider>();
+    final isLarge = settingsProvider.fabSize == FabSize.large;
+    final double fabSize = isLarge ? 70.0 : 56.0;
+
+    const String fabHeroTag = 'albums_list_fab_hero';
+
+    return AnimatedPlayingFab(
+      heroTag: fabHeroTag,
+      isLoading: playerProvider.isLoading,
+      isPlaying: playerProvider.isPlaying,
+      hasTrack: playerProvider.currentTrack != null,
+      themeColor: Colors.yellow,
+      shadowColor: Colors.redAccent,
+      size: fabSize,
+      onPressed: () => Navigator.pushNamed(
+        context,
+        Routes.musicPlayerPage,
+        arguments: fabHeroTag,
+      ),
+      onLongPress: () => context.read<TrackPlayerProvider>().clearPlaylist(),
+    );
   }
 }

@@ -1,14 +1,17 @@
 // lib/components/animated_playing_fab.dart
 
 import 'package:flutter/material.dart';
+import 'package:matrix/utils/seamless_rect_tween.dart';
 
 class AnimatedPlayingFab extends StatefulWidget {
   final bool isLoading;
   final bool isPlaying;
   final bool hasTrack;
   final Color themeColor;
+  final Color? shadowColor;
   final double size;
   final VoidCallback onPressed;
+  final VoidCallback? onLongPress;
   final String heroTag;
 
   const AnimatedPlayingFab({
@@ -17,8 +20,10 @@ class AnimatedPlayingFab extends StatefulWidget {
     required this.isPlaying,
     required this.hasTrack,
     required this.themeColor,
+    this.shadowColor,
     required this.size,
     required this.onPressed,
+    this.onLongPress,
     required this.heroTag,
   });
 
@@ -30,6 +35,7 @@ class _AnimatedPlayingFabState extends State<AnimatedPlayingFab>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
   late final Animation<double> _scaleAnimation;
+  final Curve _animationCurve = Curves.easeInOut;
 
   @override
   void initState() {
@@ -42,11 +48,10 @@ class _AnimatedPlayingFabState extends State<AnimatedPlayingFab>
     _scaleAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.easeInOut,
+        curve: _animationCurve,
       ),
     );
 
-    // If music is already playing when the widget is built, start the animation.
     if (widget.isPlaying) {
       _animationController.repeat(reverse: true);
     }
@@ -55,14 +60,12 @@ class _AnimatedPlayingFabState extends State<AnimatedPlayingFab>
   @override
   void didUpdateWidget(covariant AnimatedPlayingFab oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    // This is the key: react to changes in the isPlaying state.
     if (widget.isPlaying != oldWidget.isPlaying) {
       if (widget.isPlaying) {
-        _animationController.repeat(reverse: true); // Start pulsing
+        _animationController.repeat(reverse: true);
       } else {
-        _animationController.stop(); // Stop pulsing
-        _animationController.animateTo(0.0, duration: const Duration(milliseconds: 100), curve: Curves.easeOut); // Reset to base size
+        _animationController.stop();
+        _animationController.animateTo(0.0, duration: const Duration(milliseconds: 100), curve: Curves.easeOut);
       }
     }
   }
@@ -75,45 +78,52 @@ class _AnimatedPlayingFabState extends State<AnimatedPlayingFab>
 
   @override
   Widget build(BuildContext context) {
-    // 1. If no track is loaded, show nothing.
     if (!widget.hasTrack) {
-      return const SizedBox.shrink(); // Use SizedBox.shrink() instead of null
+      return const SizedBox.shrink();
     }
 
-    // 2. If it's loading, show the progress indicator.
+    return Hero(
+      tag: widget.heroTag,
+      createRectTween: (begin, end) {
+        return SeamlessRectTween(curve: _animationCurve, begin: begin!, end: end!);
+      },
+      child: Material(
+        color: Colors.transparent,
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          onLongPress: widget.isLoading ? widget.onLongPress : null,
+          child: _buildButtonContent(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButtonContent() {
+    final List<Shadow> shadows = [
+      Shadow(
+        color: widget.shadowColor ?? widget.themeColor.withOpacity(0.7),
+        blurRadius: 4,
+      )
+    ];
+
     if (widget.isLoading) {
-      return FloatingActionButton(
-        heroTag: widget.heroTag,
-        onPressed: widget.onPressed,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: SizedBox(
-          width: widget.size,
-          height: widget.size,
-          child: CircularProgressIndicator(
-            strokeWidth: 3.0,
-            valueColor: AlwaysStoppedAnimation<Color>(widget.themeColor),
-          ),
+      return SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: CircularProgressIndicator(
+          strokeWidth: 3.0,
+          valueColor: AlwaysStoppedAnimation<Color>(widget.themeColor),
         ),
       );
     }
 
-    // 3. Otherwise, show the animated play button.
     return ScaleTransition(
       scale: _scaleAnimation,
-      child: FloatingActionButton(
-        heroTag: widget.heroTag,
-        onPressed: widget.onPressed,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: Icon(
-          Icons.play_circle_fill,
-          color: widget.themeColor,
-          shadows: [
-            Shadow(color: widget.themeColor.withOpacity(0.7), blurRadius: 4)
-          ],
-          size: widget.size,
-        ),
+      child: Icon(
+        Icons.play_circle_fill,
+        color: widget.themeColor,
+        shadows: shadows,
+        size: widget.size,
       ),
     );
   }

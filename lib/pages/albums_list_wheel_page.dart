@@ -1,6 +1,9 @@
+// lib/pages/albums_list_wheel_page.dart
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:matrix/components/animated_playing_fab.dart';
 import 'package:matrix/components/my_drawer.dart';
 import 'package:matrix/helpers/album_helper.dart';
 import 'package:matrix/models/album.dart';
@@ -9,7 +12,8 @@ import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/services/album_data_service.dart';
 import 'package:provider/provider.dart';
-// import 'package:logger/logger.dart';
+import 'package:matrix/providers/enums.dart';
+import 'package:matrix/routes.dart';
 
 class AlbumListWheelPage extends StatefulWidget {
   const AlbumListWheelPage({super.key});
@@ -19,29 +23,25 @@ class AlbumListWheelPage extends StatefulWidget {
 }
 
 class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
-  // final _logger = Logger(printer: PrettyPrinter(methodCount: 1));
-
   late final Future<void> _initializationFuture;
-
-  // State variables
-  String _currentAlbumArt = 'assets/images/t_steal.webp';
-  String? _highlightedAlbumName; // This is ONLY controlled by the player's state
-
-  // Controllers
   late final FixedExtentScrollController _scrollController;
   late final TrackPlayerProvider _playerProvider;
-
-  bool _isInitialSetupComplete = false;
+  String? _previousAlbumName;
 
   @override
   void initState() {
     super.initState();
     _scrollController = FixedExtentScrollController();
-
     _playerProvider = context.read<TrackPlayerProvider>();
     _playerProvider.addListener(_onPlayerChange);
+    _initializationFuture = _initializeApp();
+  }
 
-    _initializationFuture = AlbumDataService().init();
+  // Combine initialization and data loading
+  Future<void> _initializeApp() async {
+    await AlbumDataService().init();
+    // After data is loaded, set up the initial scroll position
+    _setupInitialScrollPosition();
   }
 
   @override
@@ -51,70 +51,40 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     super.dispose();
   }
 
-  // --- THIS METHOD IS NOW THE ONLY SOURCE OF TRUTH FOR HIGHLIGHTS ---
+  // The listener's ONLY job now is to handle the side-effect of scrolling.
+  // It no longer calls setState.
   void _onPlayerChange() {
-    final currentlyPlayingSong = _playerProvider.currentTrack;
-    String newArt = 'assets/images/t_steal.webp';
-    String? newAlbumName;
-
-    if (currentlyPlayingSong != null) {
-      final album = AlbumDataService().albums.cast<Album?>().firstWhere(
-              (a) => a?.name == currentlyPlayingSong.albumName,
-          orElse: () => null
-      );
-      if (album != null) {
-        newArt = album.albumArt;
-        newAlbumName = album.name;
-      }
-    }
-
-    // Only update state and scroll if the album has actually changed
-    if (newAlbumName != _highlightedAlbumName) {
-      if (mounted) {
-        setState(() {
-          _currentAlbumArt = newArt;
-          _highlightedAlbumName = newAlbumName;
-        });
-        if (newAlbumName != null) {
-          _scrollToPlayingAlbum();
-        }
-      }
+    final currentAlbumName = _playerProvider.currentTrack?.albumName;
+    if (currentAlbumName != null && currentAlbumName != _previousAlbumName) {
+      _scrollToPlayingAlbum(currentAlbumName);
+      _previousAlbumName = currentAlbumName;
     }
   }
 
-  void _setupInitialState(List<Album> albums) {
-    if (!mounted || _isInitialSetupComplete || albums.isEmpty) return;
-
+  // This method now only runs once after the initial data load.
+  void _setupInitialScrollPosition() {
     final currentlyPlaying = _playerProvider.currentTrack;
-
-    // Set initial state based on the player
-    if (currentlyPlaying != null) {
-      final album = albums.cast<Album?>().firstWhere((a) => a?.name == currentlyPlaying.albumName, orElse: () => null);
-      if (album != null) {
-        _currentAlbumArt = album.albumArt;
-        _highlightedAlbumName = album.name;
-        final initialIndex = albums.indexOf(album);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.jumpToItem(initialIndex);
-          }
-        });
-      }
-    } else {
-      // Default to the first album art if nothing is playing
-      _currentAlbumArt = albums.first.albumArt;
-      _highlightedAlbumName = null; // Nothing is highlighted
-    }
-
-    _isInitialSetupComplete = true;
-  }
-
-  void _scrollToPlayingAlbum() {
-    final currentlyPlaying = _playerProvider.currentTrack;
-    if (currentlyPlaying == null || !_scrollController.hasClients) return;
+    if (!mounted || currentlyPlaying == null) return;
 
     final albums = AlbumDataService().albums;
-    final index = albums.indexWhere((album) => album.name == currentlyPlaying.albumName);
+    if (albums.isEmpty) return;
+
+    final album = albums.cast<Album?>().firstWhere((a) => a?.name == currentlyPlaying.albumName, orElse: () => null);
+    if (album != null) {
+      final initialIndex = albums.indexOf(album);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpToItem(initialIndex);
+        }
+      });
+    }
+  }
+
+  void _scrollToPlayingAlbum(String albumName) {
+    if (!_scrollController.hasClients) return;
+
+    final albums = AlbumDataService().albums;
+    final index = albums.indexWhere((album) => album.name == albumName);
 
     if (index != -1 && _scrollController.selectedItem != index) {
       _scrollController.animateToItem(
@@ -127,46 +97,50 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch the provider here. This will cause the page to rebuild when the player state changes.
+    final playerProvider = context.watch<TrackPlayerProvider>();
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
       drawer: const MyDrawer(),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(_currentAlbumArt),
-            fit: BoxFit.cover,
-            onError: (e,s) => setState(() => _currentAlbumArt = 'assets/images/t_steal.webp'),
-          ),
-        ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            color: Colors.black.withOpacity(0.5),
-            child: FutureBuilder<void>(
-              future: _initializationFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
+      body: FutureBuilder<void>(
+        future: _initializationFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
 
-                final albums = AlbumDataService().albums;
-                _setupInitialState(albums);
+          final albums = AlbumDataService().albums;
+          if (albums.isEmpty) {
+            return const Center(child: Text("No albums available."));
+          }
 
-                if (albums.isEmpty) {
-                  return const Center(child: Text("No albums available."));
-                }
+          // --- STATE IS NOW DERIVED DIRECTLY FROM THE PROVIDER ---
+          final highlightedAlbumName = playerProvider.currentTrack?.albumName;
+          final currentAlbumArt = playerProvider.currentAlbumArt; // Use the provider's art
 
-                return _buildAlbumWheel(albums);
-              },
+          return Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage(currentAlbumArt),
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-        ),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                child: _buildAlbumWheel(albums, highlightedAlbumName),
+              ),
+            ),
+          );
+        },
       ),
-      floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButton: _buildFloatingActionButton(playerProvider),
     );
   }
 
@@ -194,12 +168,11 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     );
   }
 
-  Widget _buildAlbumWheel(List<Album> albums) {
+  Widget _buildAlbumWheel(List<Album> albums, String? highlightedAlbumName) {
     final albumSettings = context.watch<AlbumSettingsProvider>();
     return LayoutBuilder(
       builder: (context, constraints) {
         final double itemExtent = constraints.maxHeight * 0.5;
-
         return NotificationListener<ScrollNotification>(
           onNotification: (notification) {
             if (notification is ScrollUpdateNotification) {
@@ -215,7 +188,6 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
             diameterRatio: 2.0,
             perspective: 0.002,
             physics: const FixedExtentScrollPhysics(),
-            // --- UPDATED: This no longer changes state, only provides feedback ---
             onSelectedItemChanged: (index) {
               HapticFeedback.mediumImpact();
             },
@@ -235,7 +207,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
                     ),
                   ),
                   onLongPress: () => playAlbumFromTracks(album.tracks),
-                  child: _buildWheelItem(album, albumSettings, itemExtent),
+                  child: _buildWheelItem(album, albumSettings, itemExtent, highlightedAlbumName),
                 );
               },
             ),
@@ -245,10 +217,8 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     );
   }
 
-  Widget _buildWheelItem(Album album, AlbumSettingsProvider settings, double itemExtent) {
-    // This now correctly and exclusively reflects the player's state
-    final isSelected = _highlightedAlbumName == album.name;
-
+  Widget _buildWheelItem(Album album, AlbumSettingsProvider settings, double itemExtent, String? highlightedAlbumName) {
+    final isSelected = highlightedAlbumName == album.name;
     return Container(
       width: itemExtent * 0.9,
       height: itemExtent * 0.9,
@@ -318,39 +288,29 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     );
   }
 
-  Widget? _buildFloatingActionButton() {
-    final playerProvider = context.watch<TrackPlayerProvider>();
+  Widget? _buildFloatingActionButton(TrackPlayerProvider playerProvider) {
+    final settingsProvider = context.watch<AlbumSettingsProvider>();
+    final isLarge = settingsProvider.fabSize == FabSize.large;
+    final double fabSize = isLarge ? 70.0 : 56.0;
+    const String fabHeroTag = 'albums_wheel_fab_hero';
 
-    if (playerProvider.isLoading) {
-      return FloatingActionButton(
-        onPressed: null,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const SizedBox(
-          width: 50,
-          height: 50,
-          child: CircularProgressIndicator(strokeWidth: 3.0, valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow)),
-        ),
-      );
-    }
-
-    if (playerProvider.currentTrack != null) {
-      return FloatingActionButton(
-        onPressed: () {
-          _scrollToPlayingAlbum();
-          Navigator.pushNamed(context, '/music_player_page');
-        },
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const Icon(
-          Icons.play_circle,
-          color: Colors.yellow,
-          shadows: [Shadow(color: Colors.redAccent, blurRadius: 4)],
-          size: 50,
-        ),
-      );
-    }
-
-    return null;
+    return AnimatedPlayingFab(
+      heroTag: fabHeroTag,
+      isLoading: playerProvider.isLoading,
+      isPlaying: playerProvider.isPlaying,
+      hasTrack: playerProvider.currentTrack != null,
+      themeColor: Colors.yellow,
+      shadowColor: Colors.redAccent,
+      size: fabSize,
+      onPressed: () {
+        _scrollToPlayingAlbum(playerProvider.currentTrack!.albumName);
+        Navigator.pushNamed(
+          context,
+          Routes.musicPlayerPage,
+          arguments: fabHeroTag,
+        );
+      },
+      onLongPress: () => context.read<TrackPlayerProvider>().clearPlaylist(),
+    );
   }
 }

@@ -16,16 +16,39 @@ class ShowsMusicPlayerPage extends StatefulWidget {
   State<ShowsMusicPlayerPage> createState() => _ShowsMusicPlayerPageState();
 }
 
-class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
+// --- 1. ADD TickerProviderStateMixin FOR ANIMATION ---
+class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
+
+  // --- 2. ADD CONTROLLER AND ANIMATION FOR PULSING ---
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+  late final TrackPlayerProvider _playerProvider;
 
   @override
   void initState() {
     super.initState();
+    _playerProvider = context.read<TrackPlayerProvider>();
+    _playerProvider.addListener(_onPlayerChange);
+
+    // --- 3. INITIALIZE THE PULSE ANIMATION ---
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+
+    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    // Start pulsing if music is already playing when the page loads
+    if (_playerProvider.isPlaying) {
+      _pulseController.repeat(reverse: true);
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final provider = context.read<TrackPlayerProvider>();
-        _scrollToCurrent(provider.currentIndex);
+        _scrollToCurrent(_playerProvider.currentIndex);
       }
     });
   }
@@ -33,7 +56,24 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _playerProvider.removeListener(_onPlayerChange);
+    _pulseController.dispose(); // --- 4. DISPOSE THE NEW CONTROLLER ---
     super.dispose();
+  }
+
+  // --- 5. ADD A LISTENER TO CONTROL THE ANIMATION ---
+  void _onPlayerChange() {
+    if (!mounted) return;
+
+    // Control the pulse animation based on player state
+    if (_playerProvider.isPlaying && !_pulseController.isAnimating) {
+      _pulseController.repeat(reverse: true);
+    } else if (!_playerProvider.isPlaying && _pulseController.isAnimating) {
+      _pulseController.stop();
+      _pulseController.animateTo(0.0, duration: const Duration(milliseconds: 100));
+    }
+
+    _scrollToCurrent(_playerProvider.currentIndex);
   }
 
   void _scrollToCurrent(int index) {
@@ -52,12 +92,6 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
   Widget build(BuildContext context) {
     final trackPlayerProvider = context.watch<TrackPlayerProvider>();
     final settingsProvider = context.watch<AlbumSettingsProvider>();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if(mounted) {
-        _scrollToCurrent(trackPlayerProvider.currentIndex);
-      }
-    });
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -102,7 +136,10 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ThemedShowsProgressBar(provider: trackPlayerProvider),
+                SizedBox(
+                  height: 30,
+                  child: ThemedShowsProgressBar(provider: trackPlayerProvider),
+                ),
                 const SizedBox(height: 16.0),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -129,30 +166,43 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> {
   Widget _buildPlayPauseButton(TrackPlayerProvider provider) {
     const heroTag = 'play_pause_button_hero_shows';
 
-    Widget loadingWidget = const SizedBox(
-      width: 64.0, height: 64.0,
-      child: Center(
-        child: SizedBox(
-          width: 48.0, height: 48.0,
-          child: CircularProgressIndicator(strokeWidth: 3.0, valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow)),
+    Widget buttonContent;
+    if (provider.isLoading) {
+      buttonContent = const CircularProgressIndicator(
+        strokeWidth: 3.0,
+        valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
+      );
+    } else {
+      // --- 6. WRAP THE ICON IN THE ScaleTransition ---
+      buttonContent = ScaleTransition(
+        scale: _pulseAnimation,
+        child: Icon(
+          provider.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+          size: 64.0,
+          color: Colors.yellow,
         ),
-      ),
-    );
-
-    Widget playPauseWidget = IconButton(
-      icon: Icon(
-        provider.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
-        size: 64.0,
-        color: Colors.yellow,
-      ),
-      onPressed: provider.isPlaying ? provider.pause : provider.play,
-    );
+      );
+    }
 
     return Hero(
       tag: heroTag,
       child: Material(
         color: Colors.transparent,
-        child: provider.isLoading ? loadingWidget : playPauseWidget,
+        child: GestureDetector(
+          onTap: () {
+            if (provider.isLoading) return;
+            if (provider.isPlaying) {
+              provider.pause();
+            } else {
+              provider.play();
+            }
+          },
+          child: SizedBox(
+            width: 64.0,
+            height: 64.0,
+            child: Center(child: buttonContent),
+          ),
+        ),
       ),
     );
   }
