@@ -145,8 +145,8 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> with Ticker
           // 1. Matrix Background (using standard matrix asset and hardcoded yellow colors)
           RepaintBoundary(
             child: Container(
-              decoration: BoxDecoration(
-                image: const DecorationImage(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
                   image: AssetImage('assets/images/t_steal.webp'),
                   fit: BoxFit.cover,
                   opacity: 0.3,

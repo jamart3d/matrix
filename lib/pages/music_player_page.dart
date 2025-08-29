@@ -236,20 +236,6 @@ class _MusicPlayerPageState extends State<MusicPlayerPage>
     );
   }
 
-  Widget _buildTrackInfo(TrackPlayerProvider trackPlayerProvider) {
-    return Text(
-      trackPlayerProvider.currentTrack!.trackName,
-      style: const TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 28,
-        color: Colors.white,
-        letterSpacing: -0.5,
-      ),
-      textAlign: TextAlign.center,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
 
   Widget _buildSongWheel(TrackPlayerProvider trackPlayerProvider) {
     return SizedBox(
@@ -306,13 +292,6 @@ class _SongScrollWheelState extends State<_SongScrollWheel> {
           _scrollToCurrentTrack();
         }
       });
-    });
-  }
-
-  void _scheduleScrollToCurrentTrack() {
-    // Just position at current track without animation
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) _scrollToCurrentTrack();
     });
   }
 

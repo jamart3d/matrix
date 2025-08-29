@@ -138,7 +138,7 @@ class TrackPlayerProvider extends ChangeNotifier {
     if (track == null) {
       _cachedAlbumArt = null;
       return;
-    };
+    }
 
     if (track.albumArt != null && track.albumArt!.isNotEmpty) {
       _cachedAlbumArt = track.albumArt;
