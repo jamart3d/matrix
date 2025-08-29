@@ -5,11 +5,11 @@ import 'package:matrix/providers/enums.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 
-
 class AlbumSettingsProvider with ChangeNotifier {
   final _logger = Logger();
 
   // --- KEYS for SharedPreferences ---
+  static const String _leadingCharacterStyleKey = 'leadingCharacterStyle';
   static const String _startupPageKey = 'startupPage';
   static const String _yearScrollbarBehaviorKey = 'yearScrollbarBehavior';
   static const String _showSortOrderKey = 'showSortOrder';
@@ -26,7 +26,6 @@ class AlbumSettingsProvider with ChangeNotifier {
   static const String _matrixFillerStyleKey = 'matrixFillerStyle';
   static const String _matrixFillerColorKey = 'matrixFillerColor';
   static const String _matrixLeadingColorKey = 'matrixLeadingColor';
-  static const String _matrixChaoticLeadingKey = 'matrixChaoticLeading';
   static const String _matrixStepModeKey = 'matrixStepMode';
   static const String _matrixLaneSpacingKey = 'matrixLaneSpacing';
   static const String _matrixAllowOverlapKey = 'matrixAllowOverlap';
@@ -41,6 +40,7 @@ class AlbumSettingsProvider with ChangeNotifier {
   static const String _matrixHalfSpeedKey = 'matrixHalfSpeed';
 
   // --- SETTINGS PROPERTIES with default values ---
+  LeadingCharacterStyle _leadingCharacterStyle = LeadingCharacterStyle.chaotic;
   StartupPage _startupPage = StartupPage.shows;
   YearScrollbarBehavior _yearScrollbarBehavior = YearScrollbarBehavior.onScroll;
   ShowSortOrder _showSortOrder = ShowSortOrder.dateDescending;
@@ -57,7 +57,6 @@ class AlbumSettingsProvider with ChangeNotifier {
   MatrixFillerStyle _matrixFillerStyle = MatrixFillerStyle.themed;
   MatrixFillerColor _matrixFillerColor = MatrixFillerColor.defaultGray;
   MatrixLeadingColor _matrixLeadingColor = MatrixLeadingColor.white;
-  bool _matrixChaoticLeading = true;
   MatrixStepMode _matrixStepMode = MatrixStepMode.stepped;
   MatrixLaneSpacing _matrixLaneSpacing = MatrixLaneSpacing.standard;
   bool _matrixAllowOverlap = false;
@@ -72,6 +71,7 @@ class AlbumSettingsProvider with ChangeNotifier {
   bool _matrixHalfSpeed = false;
 
   // --- PUBLIC GETTERS ---
+  LeadingCharacterStyle get leadingCharacterStyle => _leadingCharacterStyle;
   StartupPage get startupPage => _startupPage;
   YearScrollbarBehavior get yearScrollbarBehavior => _yearScrollbarBehavior;
   ShowSortOrder get showSortOrder => _showSortOrder;
@@ -88,7 +88,6 @@ class AlbumSettingsProvider with ChangeNotifier {
   MatrixFillerStyle get matrixFillerStyle => _matrixFillerStyle;
   MatrixFillerColor get matrixFillerColor => _matrixFillerColor;
   MatrixLeadingColor get matrixLeadingColor => _matrixLeadingColor;
-  bool get matrixChaoticLeading => _matrixChaoticLeading;
   MatrixStepMode get matrixStepMode => _matrixStepMode;
   MatrixLaneSpacing get matrixLaneSpacing => _matrixLaneSpacing;
   bool get matrixAllowOverlap => _matrixAllowOverlap;
@@ -110,6 +109,7 @@ class AlbumSettingsProvider with ChangeNotifier {
     _logger.i("Loading settings from SharedPreferences...");
     final prefs = await SharedPreferences.getInstance();
 
+    _leadingCharacterStyle = LeadingCharacterStyle.values[prefs.getInt(_leadingCharacterStyleKey) ?? _leadingCharacterStyle.index];
     _startupPage = StartupPage.values[prefs.getInt(_startupPageKey) ?? _startupPage.index];
     _yearScrollbarBehavior = YearScrollbarBehavior.values[prefs.getInt(_yearScrollbarBehaviorKey) ?? _yearScrollbarBehavior.index];
     _showSortOrder = ShowSortOrder.values[prefs.getInt(_showSortOrderKey) ?? _showSortOrder.index];
@@ -126,7 +126,6 @@ class AlbumSettingsProvider with ChangeNotifier {
     _matrixFillerStyle = MatrixFillerStyle.values[prefs.getInt(_matrixFillerStyleKey) ?? _matrixFillerStyle.index];
     _matrixFillerColor = MatrixFillerColor.values[prefs.getInt(_matrixFillerColorKey) ?? _matrixFillerColor.index];
     _matrixLeadingColor = MatrixLeadingColor.values[prefs.getInt(_matrixLeadingColorKey) ?? _matrixLeadingColor.index];
-    _matrixChaoticLeading = prefs.getBool(_matrixChaoticLeadingKey) ?? _matrixChaoticLeading;
     _matrixStepMode = MatrixStepMode.values[prefs.getInt(_matrixStepModeKey) ?? _matrixStepMode.index];
     _matrixLaneSpacing = MatrixLaneSpacing.values[prefs.getInt(_matrixLaneSpacingKey) ?? _matrixLaneSpacing.index];
     _matrixAllowOverlap = prefs.getBool(_matrixAllowOverlapKey) ?? _matrixAllowOverlap;
@@ -148,14 +147,16 @@ class AlbumSettingsProvider with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     try {
-      if (value is bool) await prefs.setBool(key, value);
-      else if (value is int) await prefs.setInt(key, value);
+      if (value is bool) {
+        await prefs.setBool(key, value);
+      } else if (value is int) await prefs.setInt(key, value);
       else if (value is double) await prefs.setDouble(key, value);
     } catch (e) {
       _logger.e("Failed to save setting '$key': $e");
     }
   }
 
+  void setLeadingCharacterStyle(LeadingCharacterStyle v) => _updateValue(_leadingCharacterStyleKey, v.index, () => _leadingCharacterStyle = v);
   void setStartupPage(StartupPage v) => _updateValue(_startupPageKey, v.index, () => _startupPage = v);
   void setYearScrollbarBehavior(YearScrollbarBehavior v) => _updateValue(_yearScrollbarBehaviorKey, v.index, () => _yearScrollbarBehavior = v);
   void setShowSortOrder(ShowSortOrder v) => _updateValue(_showSortOrderKey, v.index, () => _showSortOrder = v);
@@ -172,7 +173,6 @@ class AlbumSettingsProvider with ChangeNotifier {
   void setMatrixFillerStyle(MatrixFillerStyle v) => _updateValue(_matrixFillerStyleKey, v.index, () => _matrixFillerStyle = v);
   void setMatrixFillerColor(MatrixFillerColor v) => _updateValue(_matrixFillerColorKey, v.index, () => _matrixFillerColor = v);
   void setMatrixLeadingColor(MatrixLeadingColor v) => _updateValue(_matrixLeadingColorKey, v.index, () => _matrixLeadingColor = v);
-  void setMatrixChaoticLeading(bool v) => _updateValue(_matrixChaoticLeadingKey, v, () => _matrixChaoticLeading = v);
   void setMatrixStepMode(MatrixStepMode v) => _updateValue(_matrixStepModeKey, v.index, () => _matrixStepMode = v);
   void setMatrixLaneSpacing(MatrixLaneSpacing v) => _updateValue(_matrixLaneSpacingKey, v.index, () => _matrixLaneSpacing = v);
   void setMatrixAllowOverlap(bool v) => _updateValue(_matrixAllowOverlapKey, v, () => _matrixAllowOverlap = v);

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gap/gap.dart'; // <-- ADDED IMPORT
 import 'package:matrix/components/player/buffer_info_panel.dart';
 import 'package:matrix/components/player/themed_progress_bar.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
@@ -202,9 +203,11 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
           ),
         ],
       ),
+      // --- BODY RESTRUCTURED ---
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // 1. Background is preserved
           RepaintBoundary(
             child: Container(
               decoration: BoxDecoration(
@@ -221,41 +224,31 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
               ),
             ),
           ),
-          Column(
-            children: [
-              if (settingsProvider.showBufferInfo)
-                RepaintBoundary(
-                  child: BufferInfoPanel(
+          // 2. Layout from ShowsMusicPlayerPage is placed on top
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: _buildTrackList(context, trackPlayerProvider, themeColor),
+                  ),
+                  _buildPlayerControls(trackPlayerProvider, themeColor),
+                  const Gap(24),
+                  ThemedProgressBar(
                     provider: trackPlayerProvider,
+                    activeColor: themeColor,
+                    shadowColor: themeAccentColor,
+                    bufferColor: themeColor.withOpacity(0.3),
+                    overlayColor: themeAccentColor.withOpacity(0.2),
                   ),
-                ),
-              Expanded(
-                child: _buildTrackList(context, trackPlayerProvider, themeColor),
+                  const Gap(16),
+                  if (settingsProvider.showBufferInfo)
+                    BufferInfoPanel(provider: trackPlayerProvider),
+                  const Gap(20),
+                ],
               ),
-              RepaintBoundary(
-                child: Container(
-                  padding: const EdgeInsets.all(16.0).copyWith(bottom: 24.0),
-                  color: Colors.black.withOpacity(0.5),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        height: 30,
-                        child: ThemedProgressBar(
-                          provider: trackPlayerProvider,
-                          activeColor: themeColor,
-                          shadowColor: themeAccentColor,
-                          bufferColor: themeColor.withOpacity(0.3),
-                          overlayColor: themeAccentColor.withOpacity(0.2),
-                        ),
-                      ),
-                      const SizedBox(height: 16.0),
-                      _buildPlayerControls(trackPlayerProvider, themeColor),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -265,7 +258,6 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
   Widget _buildTrackList(BuildContext context, TrackPlayerProvider provider, Color themeColor) {
     final playlist = provider.playlist;
     final currentIndex = provider.currentIndex;
-    final settings = context.read<AlbumSettingsProvider>();
 
     if (playlist.isEmpty) {
       return const Center(
@@ -273,46 +265,43 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
       );
     }
 
-    return SafeArea(
-      top: !settings.showBufferInfo,
-      bottom: false,
-      child: ListView.separated(
-        controller: _scrollController,
-        padding: EdgeInsets.only(top: settings.showBufferInfo ? 0 : 80),
-        itemCount: playlist.length,
-        separatorBuilder: (context, index) => const Divider(
-          height: 1,
-          color: Colors.white10,
-          indent: 16,
-          endIndent: 16,
-        ),
-        itemBuilder: (context, index) {
-          final track = playlist[index];
-          final isCurrentlyPlaying = index == currentIndex;
-          return RepaintBoundary(
-            child: AnimatedBuilder(
-              animation: _slideAnimation,
-              builder: (context, child) {
-                final offset = isCurrentlyPlaying && _hasAnimatedOnce
-                    ? Offset(20.0 * (1.0 - _slideAnimation.value), 0.0)
-                    : Offset.zero;
-
-                final opacity = isCurrentlyPlaying && _hasAnimatedOnce
-                    ? _fadeAnimation
-                    : const AlwaysStoppedAnimation<double>(1.0);
-
-                return FadeTransition(
-                  opacity: opacity,
-                  child: Transform.translate(
-                    offset: offset,
-                    child: _buildTrackTile(track, index, isCurrentlyPlaying, themeColor, provider),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+    // This SafeArea is no longer needed as the parent Column is wrapped in one.
+    return ListView.separated(
+      controller: _scrollController,
+      padding: EdgeInsets.zero, // Padding is handled by the parent
+      itemCount: playlist.length,
+      separatorBuilder: (context, index) => const Divider(
+        height: 1,
+        color: Colors.white10,
+        indent: 16,
+        endIndent: 16,
       ),
+      itemBuilder: (context, index) {
+        final track = playlist[index];
+        final isCurrentlyPlaying = index == currentIndex;
+        return RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: _slideAnimation,
+            builder: (context, child) {
+              final offset = isCurrentlyPlaying && _hasAnimatedOnce
+                  ? Offset(20.0 * (1.0 - _slideAnimation.value), 0.0)
+                  : Offset.zero;
+
+              final opacity = isCurrentlyPlaying && _hasAnimatedOnce
+                  ? _fadeAnimation
+                  : const AlwaysStoppedAnimation<double>(1.0);
+
+              return FadeTransition(
+                opacity: opacity,
+                child: Transform.translate(
+                  offset: offset,
+                  child: _buildTrackTile(track, index, isCurrentlyPlaying, themeColor, provider),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -410,7 +399,6 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
     );
   }
 
-  // --- THIS IS THE CORRECTED METHOD ---
   Widget _buildPlayPauseButton(TrackPlayerProvider provider, Color themeColor) {
     const heroTag = 'play_pause_button_hero_matrix';
 
@@ -421,11 +409,9 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
         valueColor: AlwaysStoppedAnimation<Color>(themeColor),
       );
     } else {
-      // The track change "pop" is combined with the pulsing animation
       buttonContent = AnimatedBuilder(
         animation: Listenable.merge([_trackChangeController, _pulseAnimation]),
         builder: (context, child) {
-          // The pop animation is additive to the pulse animation
           final scale = _pulseAnimation.value * (1.0 + (0.1 * (1.0 - _trackChangeController.value)));
           return Transform.scale(
             scale: scale,

@@ -122,6 +122,14 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
+  String _getLeadingCharacterStyleText(LeadingCharacterStyle style) {
+    switch (style) {
+      case LeadingCharacterStyle.chaotic: return 'Single Chaotic';
+      case LeadingCharacterStyle.year: return "Show's Year (2-digit)";
+      case LeadingCharacterStyle.none: return 'None (Venue Only)';
+    }
+  }
+
   Color _getLeadingColorValue(MatrixLeadingColor color) {
     switch (color) {
       case MatrixLeadingColor.white: return Colors.white;
@@ -259,7 +267,8 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.play_circle_outline, color: iconColor),
                     title: const Text('Floating Action Button Size', style: titleStyle),
-                    subtitle: Text('Affects the player button on the Shows and Matrix pages.', style: subtitleStyle),
+                    // --- FIX 1: Display the current FAB size ---
+                    subtitle: Text('Current: ${_getFabSizeText(settings.fabSize)}', style: subtitleStyle),
                     trailing: PopupMenuButton<FabSize>(
                       onSelected: settings.setFabSize,
                       itemBuilder: (ctx) => FabSize.values.map((size) => PopupMenuItem(
@@ -277,7 +286,7 @@ class SettingsPage extends StatelessWidget {
                 key: const PageStorageKey('hunter_section'),
                 initiallyExpanded: settings.isHunterExpanded,
                 onExpansionChanged: settings.setHunterExpanded,
-                title: const Text("Hunter's trix Page", style: headerStyle),
+                title: const Text("Seamon's list", style: headerStyle),
                 children: [
                   SwitchListTile(
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
@@ -302,7 +311,8 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.speed, color: iconColor),
                     title: const Text('Rain Density', style: titleStyle),
-                    subtitle: Text('Controls how frequently new text columns appear.', style: subtitleStyle),
+                    // --- FIX 2: Display the current Rain Density value ---
+                    subtitle: Text('Current: ${settings.matrixRainSpeed.round()} - Controls how frequently new text columns appear.', style: subtitleStyle),
                   ),
                   Slider(
                     value: settings.matrixRainSpeed,
@@ -339,7 +349,7 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.view_stream_outlined, color: iconColor),
                     title: const Text('Lane Spacing', style: titleStyle),
-                    subtitle: Text('Adjusts the horizontal gap between columns.', style: subtitleStyle),
+                    subtitle: Text(_getLaneSpacingText(settings.matrixLaneSpacing), style: subtitleStyle),
                     trailing: PopupMenuButton<MatrixLaneSpacing>(
                       onSelected: settings.setMatrixLaneSpacing,
                       itemBuilder: (ctx) => MatrixLaneSpacing.values.map((spacing) => PopupMenuItem(
@@ -362,7 +372,7 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.highlight, color: iconColor),
                     title: const Text('Glow Intensity', style: titleStyle),
-                    subtitle: Text('Set the brightness of the glow effect.', style: subtitleStyle),
+                    subtitle: Text(_getGlowIntensityText(settings.matrixGlowIntensity), style: subtitleStyle),
                     trailing: PopupMenuButton<MatrixGlowIntensity>(
                       onSelected: settings.setMatrixGlowIntensity,
                       itemBuilder: (ctx) => MatrixGlowIntensity.values.map((intensity) => PopupMenuItem(
@@ -376,7 +386,7 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.font_download_outlined, color: iconColor),
                     title: const Text('Font Size', style: titleStyle),
-                    subtitle: Text('Adjust the size of the falling characters.', style: subtitleStyle),
+                    subtitle: Text(_getMatrixFontSizeText(settings.matrixFontSize), style: subtitleStyle),
                     trailing: PopupMenuButton<MatrixFontSize>(
                       onSelected: settings.setMatrixFontSize,
                       itemBuilder: (ctx) => MatrixFontSize.values.map((size) => PopupMenuItem(
@@ -390,7 +400,7 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.format_bold, color: iconColor),
                     title: const Text('Font Weight', style: titleStyle),
-                    subtitle: Text('Set a global font weight for all characters.', style: subtitleStyle),
+                    subtitle: Text(_getMatrixFontWeightText(settings.matrixFontWeight), style: subtitleStyle),
                     trailing: PopupMenuButton<MatrixFontWeight>(
                       onSelected: settings.setMatrixFontWeight,
                       itemBuilder: (ctx) => MatrixFontWeight.values.map((weight) => PopupMenuItem(
@@ -409,14 +419,22 @@ class SettingsPage extends StatelessWidget {
                     secondary: const Icon(Icons.radio_button_unchecked, color: iconColor),
                     activeColor: Colors.yellow,
                   ),
-                  SwitchListTile(
+                  ListTile(
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
-                    title: const Text('Chaotic Leading Characters', style: titleStyle),
-                    subtitle: Text('Randomize the leading character on every step.', style: subtitleStyle),
-                    value: settings.matrixChaoticLeading,
-                    onChanged: settings.setMatrixChaoticLeading,
-                    secondary: const Icon(Icons.flash_on, color: iconColor),
-                    activeColor: Colors.yellow,
+                    leading: const Icon(Icons.flash_on, color: iconColor),
+                    title: const Text('Leading Character Style', style: titleStyle),
+                    subtitle: Text(
+                      _getLeadingCharacterStyleText(settings.leadingCharacterStyle),
+                      style: subtitleStyle,
+                    ),
+                    trailing: PopupMenuButton<LeadingCharacterStyle>(
+                      onSelected: settings.setLeadingCharacterStyle,
+                      itemBuilder: (ctx) => LeadingCharacterStyle.values.map((style) => PopupMenuItem(
+                        value: style,
+                        child: Text(_getLeadingCharacterStyleText(style)),
+                      )).toList(),
+                      icon: const Icon(Icons.arrow_drop_down, color: iconColor),
+                    ),
                   ),
                   ListTile(
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
@@ -565,7 +583,8 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.brightness_6, color: iconColor),
                     title: const Text('Visual Feedback Intensity', style: titleStyle),
-                    subtitle: Text('Controls brightness of tap and highlight effects.', style: subtitleStyle),
+                    // --- FIX 3: Display the current Feedback Intensity value ---
+                    subtitle: Text('Current: ${(settings.matrixFeedbackIntensity * 100).round()}% - Controls brightness of tap and highlight effects.', style: subtitleStyle),
                   ),
                   Slider(
                     value: settings.matrixFeedbackIntensity,
@@ -591,7 +610,6 @@ class SettingsPage extends StatelessWidget {
                     ),
                 ],
               ),
-              // --- ABOUT LIST TILE HAS BEEN REMOVED FROM HERE ---
             ],
           );
         },

@@ -41,3 +41,6 @@ enum MatrixFontWeight { normal, bold }
 
 /// Defines the font size for characters in the Matrix Rain.
 enum MatrixFontSize { small, medium, large }
+
+/// Defines the style of the leading (brightest) characters in the Matrix Rain.
+enum LeadingCharacterStyle { chaotic, year, none }

@@ -221,7 +221,7 @@ class YearScrollbarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final trackHeight = size.height - 40;
-    final trackTop = 20.0;
+    const trackTop = 20.0;
     final trackBottom = size.height - 20;
 
     // Draw track
@@ -235,7 +235,7 @@ class YearScrollbarPainter extends CustomPainter {
     );
 
     // Calculate thumb position based on progress
-    final thumbHeight = 40.0;
+    const thumbHeight = 40.0;
     final thumbTop = trackTop + (trackHeight - thumbHeight) * progress;
 
     final thumbRect = RRect.fromRectAndRadius(

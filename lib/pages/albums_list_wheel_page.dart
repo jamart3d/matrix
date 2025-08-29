@@ -22,11 +22,11 @@ class AlbumListWheelPage extends StatefulWidget {
   State<AlbumListWheelPage> createState() => _AlbumListWheelPageState();
 }
 
-class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
+class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBindingObserver {
   late final Future<void> _initializationFuture;
   late final FixedExtentScrollController _scrollController;
   late final TrackPlayerProvider _playerProvider;
-  String? _previousAlbumName;
+  // Removed _previousAlbumName - no longer needed with the new lifecycle handling
 
   @override
   void initState() {
@@ -35,6 +35,19 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
     _playerProvider = context.read<TrackPlayerProvider>();
     _playerProvider.addListener(_onPlayerChange);
     _initializationFuture = _initializeApp();
+
+    // Add this line to observe lifecycle changes
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  // Add this method to handle app lifecycle changes
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // When the app comes back to the foreground (e.g., returning from another page),
+      // trigger a check for the current album.
+      _onPlayerChange();
+    }
   }
 
   // Combine initialization and data loading
@@ -48,16 +61,19 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
   void dispose() {
     _playerProvider.removeListener(_onPlayerChange);
     _scrollController.dispose();
+    // Remove the observer
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   // The listener's ONLY job now is to handle the side-effect of scrolling.
-  // It no longer calls setState.
+  // It no longer needs _previousAlbumName to prevent redundant calls.
   void _onPlayerChange() {
     final currentAlbumName = _playerProvider.currentTrack?.albumName;
-    if (currentAlbumName != null && currentAlbumName != _previousAlbumName) {
+    if (currentAlbumName != null) {
+      // Always try to scroll to the playing album when _onPlayerChange is called.
+      // _scrollToPlayingAlbum will prevent unnecessary animations if already there.
       _scrollToPlayingAlbum(currentAlbumName);
-      _previousAlbumName = currentAlbumName;
     }
   }
 
@@ -146,7 +162,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
 
   AppBar _buildAppBar() {
     return AppBar(
-      title: const Text("Hunter's Matrix"),
+      title: const Text("select a random matrix - >"),
       centerTitle: true,
       forceMaterialTransparency: true,
       backgroundColor: Colors.transparent,
@@ -176,6 +192,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
         return NotificationListener<ScrollNotification>(
           onNotification: (notification) {
             if (notification is ScrollUpdateNotification) {
+              // Trigger haptic feedback when scrolling snaps to a new item
               if (notification.metrics.pixels % itemExtent < 1) {
                 HapticFeedback.selectionClick();
               }
@@ -189,6 +206,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
             perspective: 0.002,
             physics: const FixedExtentScrollPhysics(),
             onSelectedItemChanged: (index) {
+              // Trigger haptic feedback when item selection changes
               HapticFeedback.mediumImpact();
             },
             childDelegate: ListWheelChildBuilderDelegate(
@@ -238,7 +256,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
           fit: StackFit.expand,
           children: [
             Image.asset(album.albumArt, fit: BoxFit.cover, gaplessPlayback: true),
-            if (album.releaseNumber == 105)
+            if (album.releaseNumber == 105) // Example conditional icon
               const Positioned(
                 bottom: 8,
                 right: 8,
@@ -303,12 +321,19 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> {
       shadowColor: Colors.redAccent,
       size: fabSize,
       onPressed: () {
-        _scrollToPlayingAlbum(playerProvider.currentTrack!.albumName);
-        Navigator.pushNamed(
-          context,
-          Routes.musicPlayerPage,
-          arguments: fabHeroTag,
-        );
+        if (playerProvider.currentTrack != null) {
+          _scrollToPlayingAlbum(playerProvider.currentTrack!.albumName);
+          Navigator.pushNamed(
+            context,
+            Routes.musicPlayerPage,
+            arguments: fabHeroTag,
+          );
+        } else {
+          // Optionally, show a message if no track is playing
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No track is currently playing')),
+          );
+        }
       },
       onLongPress: () => context.read<TrackPlayerProvider>().clearPlaylist(),
     );

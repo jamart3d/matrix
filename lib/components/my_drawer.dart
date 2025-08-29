@@ -1,7 +1,7 @@
 // lib/components/my_drawer.dart
 
+import 'dart:ui'; // Import this for ImageFilter.
 import 'package:flutter/material.dart';
-// import 'package:matrix/pages/about_page.dart';
 import '../routes.dart';
 
 class MyDrawer extends StatelessWidget {
@@ -9,118 +9,136 @@ class MyDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // --- MODIFICATION 1: Make the Drawer's own background transparent ---
     return Drawer(
-      child: Container(
-        color: Colors.grey[900],
-        child: Column(
-          children: [
-            DrawerHeader(
-              padding: EdgeInsets.zero,
-              margin: EdgeInsets.zero,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset(
-                    'assets/images/t_steal.webp',
-                    fit: BoxFit.cover,
-                  ),
-                  Container(color: Colors.black.withOpacity(0.5)),
-                  const Center(
-                    child: Text(
-                      'matrix',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+      backgroundColor: Colors.transparent,
+      child:
+      // --- MODIFICATION 2: Clip the content and apply the blur filter ---
+      ClipRRect(
+        // Optional: Define rounding for the right corners of the drawer.
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+          child: Container(
+            // --- MODIFICATION 3: Use a semi-transparent color for the glass tint ---
+            color: Colors.grey[900]!.withOpacity(0.7),
+            child: Column(
+              children: [
+                DrawerHeader(
+                  padding: EdgeInsets.zero,
+                  margin: EdgeInsets.zero,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        'assets/images/t_steal.webp',
+                        fit: BoxFit.cover,
                       ),
-                    ),
+                      Container(color: Colors.black.withOpacity(0.5)),
+                      const Center(
+                        child: Text(
+                          'matrix',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.grain, color: Colors.green),
+                        title: const Text('matrix', style: TextStyle(color: Colors.white)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, Routes.matrixRainPage);
+                        },
+                      ),
+                      const Divider(color: Colors.white24),
+                      ListTile(
+                        leading: const Icon(Icons.music_note, color: Colors.white70),
+                        title: const Text('All Shows', style: TextStyle(color: Colors.white)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushReplacementNamed(context, Routes.showsPage);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
+                        title: const Text('Seamons list', style: TextStyle(color: Colors.white)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushReplacementNamed(context, Routes.albumsPage, arguments: 'seamons');
+                        },
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 24.0),
+                        child: ListTile(
+                          leading: const Icon(Icons.lightbulb_circle, color: Colors.white70),
+                          title: const Text('Wheel', style: TextStyle(color: Colors.white)),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.pushReplacementNamed(context, Routes.albumsListWheelPage);
+                          },
+                        ),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
+                        title: const Text("SirMick's list", style: TextStyle(color: Colors.white)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'sirmick');
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
+                        title: const Text("Dusborne's list", style: TextStyle(color: Colors.white)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'dusborne');
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.mic_none_rounded, color: Colors.white70),
+                        title: const Text("others", style: TextStyle(color: Colors.white)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'misc');
+                        },
+                      ),
+                      const Divider(color: Colors.white24),
+                      ListTile(
+                        leading: const Icon(Icons.settings, color: Colors.white70),
+                        title: const Text('Settings', style: TextStyle(color: Colors.white)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, Routes.settingsPage);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.info_outline, color: Colors.white70),
+                        title: const Text('About', style: TextStyle(color: Colors.white)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, Routes.aboutPage);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.music_note, color: Colors.white70),
-                    title: const Text('All Shows', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, Routes.showsPage);
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
-                    title: const Text('Seamons list', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, Routes.albumsPage, arguments: 'seamons');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
-                    title: const Text("SirMick's list", style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'sirmick');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.person_pin_circle, color: Colors.white70),
-                    title: const Text("Dusborne's list", style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'dusborne');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.mic_none_rounded, color: Colors.white70),
-                    title: const Text("others", style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, Routes.showsPage, arguments: 'misc');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.lightbulb_circle, color: Colors.white70),
-                    title: const Text('Wheel', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, Routes.albumsListWheelPage);
-                    },
-                  ),
-                  const Divider(color: Colors.white24),
-                  ListTile(
-                    leading: const Icon(Icons.grain, color: Colors.green),
-                    title: const Text('matrix', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, Routes.matrixRainPage);
-                    },
-                  ),
-                  const Divider(color: Colors.white24),
-                  ListTile(
-                    leading: const Icon(Icons.settings, color: Colors.white70),
-                    title: const Text('Settings', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, Routes.settingsPage);
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.info_outline, color: Colors.white70),
-                    title: const Text('About', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, Routes.aboutPage);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

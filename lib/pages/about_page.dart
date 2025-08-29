@@ -122,11 +122,11 @@ class AboutPage extends StatelessWidget {
             Center(
               child: Card(
                 color: Colors.grey[900],
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+                child: const Padding(
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      const Text(
+                      Text(
                         '🎵 Matrix 🎵',
                         style: TextStyle(
                           fontSize: 28,
@@ -137,8 +137,8 @@ class AboutPage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      SizedBox(height: 8),
+                      Text(
                         'Thank you Archive.org!',
                         style: TextStyle(
                           fontSize: 18,
@@ -146,7 +146,7 @@ class AboutPage extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const Text(
+                      Text(
                         'and The Grateful Dead!!',
                         style: TextStyle(
                           fontSize: 18,
@@ -257,35 +257,35 @@ class AboutPage extends StatelessWidget {
 
             Card(
               color: Colors.grey[900],
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+              child: const Padding(
+                padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'All audio is streamed from Archive.org',
                       style: TextStyle(fontSize: 16, color: Colors.white),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           'Except for album 105, which has an icon ',
                           style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
-                        const Icon(
+                        Icon(
                           Icons.album,
                           color: Colors.green,
                         ),
-                        const Text(
+                        Text(
                           ' (local/cached)',
                           style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
+                    SizedBox(height: 16),
+                    Text(
                       'Users are responsible for complying with copyright laws.',
                       style: TextStyle(
                         fontSize: 14,

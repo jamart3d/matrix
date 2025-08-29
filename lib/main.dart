@@ -47,10 +47,10 @@ Future<void> main() async {
 Future<void> _initializeAudioBackground() async {
   await JustAudioBackground.init(
     androidNotificationChannelId: 'com.matrix.audio_channel',
-    androidNotificationChannelName: 'HunTrix Audio Playback',
+    androidNotificationChannelName: 'MaTrix Audio Playback',
     androidNotificationOngoing: true,
     androidNotificationIcon: 'mipmap/ic_launcher',
-    preloadArtwork: true,
+    preloadArtwork: false,
   );
 }
 

@@ -96,12 +96,16 @@ class MatrixRainPainter extends CustomPainter {
       }
 
       if (column.rippleEffect > 0) _drawRippleEffect(canvas, column);
+      if (column.characters.isEmpty) continue;
+
       for (int i = 0; i < column.characters.length; i++) {
         final yOffset = column.yPosition + (i * column.textHeight);
         if (yOffset + column.textHeight < 0 || yOffset > size.height) continue;
 
-        if (i == column.characters.length - 1) {
-          _paintLeadingCharacter(canvas, column, yOffset, size);
+        final isLeadingChar = i >= (column.characters.length - column.numLeadingChars);
+
+        if (isLeadingChar) {
+          _paintLeadingCharacter(canvas, column, i, yOffset, size);
         } else {
           _paintBodyCharacter(canvas, column, i, yOffset);
         }
@@ -109,7 +113,7 @@ class MatrixRainPainter extends CustomPainter {
     }
   }
 
-  void _paintLeadingCharacter(Canvas canvas, MatrixRainColumn column, double yOffset, Size size) {
+  void _paintLeadingCharacter(Canvas canvas, MatrixRainColumn column, int index, double yOffset, Size size) {
     Color charColor;
     double fontSize;
     List<Shadow> shadows = [];
@@ -140,11 +144,12 @@ class MatrixRainPainter extends CustomPainter {
       charColor = Color.lerp(charColor, Colors.grey.shade800, dimProgress.clamp(0.0, 1.0))!;
     }
 
-    _paintChar(canvas, column.characters.last, column.xPosition, yOffset, charColor, fontSize, FontWeight.bold, shadows, column.rippleEffect);
+    _paintChar(canvas, column.characters[index], column.xPosition, yOffset, charColor, fontSize, FontWeight.bold, shadows, column.rippleEffect);
   }
 
   void _paintBodyCharacter(Canvas canvas, MatrixRainColumn column, int index, double yOffset) {
-    final isFiller = column.isRandomFiller(index);
+    final isFiller = column.isRandomFiller(index) || column.isTopChar(index);
+
     if (isFiller && fillerStyle == MatrixFillerStyle.invisible) return;
 
     List<Color> shades;
@@ -164,7 +169,7 @@ class MatrixRainPainter extends CustomPainter {
         break;
 
       case MatrixTitleStyle.gradient:
-        final gradPos = index / (column.characters.length - 2).clamp(1, double.infinity);
+        final gradPos = index / (column.characters.length - column.numLeadingChars).clamp(1, double.infinity);
         final cIndex = (gradPos * (shades.length - 1)).round().clamp(0, shades.length - 1);
         charColor = shades[cIndex];
         break;

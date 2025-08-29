@@ -125,7 +125,7 @@ class TrackPlayerProvider extends ChangeNotifier {
       }
     });
 
-    _audioPlayer.currentIndexStream.distinct().listen((index) {
+    _audioPlayer.currentIndexStream.listen((index) {
       if (index != null && _currentIndex != index) {
         _currentIndex = index;
         notifyListeners();

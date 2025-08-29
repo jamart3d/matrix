@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:math';
+// import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:matrix/components/animated_playing_fab.dart';
 import 'package:matrix/components/matrix_rain/matrix_rain_column.dart';
@@ -72,7 +73,11 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
     final currentAlbum = playerProvider.currentAlbumTitle;
 
     for (var column in _columns) {
-      column.fall(size.height, _random, settingsProvider.matrixChaoticLeading, settingsProvider.matrixStepMode);
+      column.fall(
+        screenHeight: size.height,
+        random: _random,
+        stepMode: settingsProvider.matrixStepMode,
+      );
       column.isCurrentlyPlaying = column.showVenue == currentAlbum;
     }
 
@@ -183,26 +188,41 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
     if (numLanes <= 0) return;
 
     int randomLaneIndex;
-
     if (settings.matrixAllowOverlap) {
       randomLaneIndex = _random.nextInt(numLanes);
     } else {
       final allLanes = List.generate(numLanes, (index) => index);
       final availableLanes = allLanes.where((lane) => !_occupiedLanes.contains(lane)).toList();
-
-      if (availableLanes.isEmpty) {
-        return;
-      }
+      if (availableLanes.isEmpty) return;
       randomLaneIndex = availableLanes[_random.nextInt(availableLanes.length)];
     }
 
     final show = _filteredShows[_random.nextInt(_filteredShows.length)];
-    final titleChars = show.venue.split('').map((c) => c == ' ' ? MatrixRainColumn.getRandomMatrixChar() : c).toList();
-    final finalChars = [MatrixRainColumn.getRandomMatrixChar(), ...titleChars, MatrixRainColumn.getRandomMatrixChar()];
+
+    final topChar = [MatrixRainColumn.getRandomMatrixChar()];
+    final titleChars = show.venue.split('');
+
+    final List<String> leadingChars;
+    switch (settings.leadingCharacterStyle) {
+      case LeadingCharacterStyle.year:
+        if (show.year.length >= 2) {
+          leadingChars = show.year.substring(show.year.length - 2).split('');
+        } else {
+          leadingChars = ['?', '?'];
+        }
+        break;
+      case LeadingCharacterStyle.chaotic:
+        leadingChars = [MatrixRainColumn.getRandomMatrixChar()];
+        break;
+      case LeadingCharacterStyle.none:
+        leadingChars = [];
+        break;
+    }
+
+    final finalChars = [...topChar, ...titleChars, ...leadingChars];
     if (finalChars.isEmpty) return;
 
     final xPosition = (randomLaneIndex * laneWidth) + (_random.nextDouble() * laneWidth * 0.5);
-
     _occupiedLanes.add(randomLaneIndex);
 
     final baseSpeed = _random.nextDouble() * 4 + 2;
@@ -216,6 +236,7 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
 
     _columns.add(MatrixRainColumn(
       characters: finalChars,
+      style: settings.leadingCharacterStyle,
       showVenue: show.venue,
       originalVenue: show.venue,
       year: show.year,
@@ -298,21 +319,20 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
     );
   }
 
-  // --- THIS METHOD HAS BEEN REPLACED ---
   Widget _buildFloatingActionButton(TrackPlayerProvider playerProvider, AlbumSettingsProvider settingsProvider) {
     final themeColor = _getThemeColor(settingsProvider.matrixColorTheme);
     final isLarge = settingsProvider.fabSize == FabSize.large;
     final double fabSize = isLarge ? 80.0 : 50.0;
-
-    // The logic is now entirely handled by the new reusable widget.
     return AnimatedPlayingFab(
-      heroTag: 'play_pause_button_hero_matrix', // Use a unique hero tag
+      heroTag: 'play_pause_button_hero_matrix',
       isLoading: playerProvider.isLoading,
       isPlaying: playerProvider.isPlaying,
       hasTrack: playerProvider.currentTrack != null,
       themeColor: themeColor,
+      shadowColor: themeColor.withOpacity(0.7),
       size: fabSize,
       onPressed: () => Navigator.pushNamed(context, Routes.matrixMusicPlayerPage),
+      onLongPress: () => context.read<TrackPlayerProvider>().clearPlaylist(),
     );
   }
 
@@ -323,7 +343,6 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
       if(settings.matrixRippleEffects) {
         tapped.triggerRipple();
       }
-
       final show = _shows.cast<Show?>().firstWhere((s) => s?.venue == tapped.showVenue, orElse: () => null);
       if (show != null) {
         playTracklist(context.read<TrackPlayerProvider>(), show.primaryTracks);

@@ -49,6 +49,7 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
   void didChangeDependencies() {
     super.didChangeDependencies();
     final trackPlayerProvider = context.watch<TrackPlayerProvider>();
+    // Default call: preserves scroll state unless the song changes.
     _updateCurrentAlbumFromProvider(trackPlayerProvider);
   }
 
@@ -58,10 +59,13 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
       preloadAlbumImages(AlbumDataService().albums, context);
       _connectionChecked = true;
     }
+    _scrollToCurrentAlbum();
   }
 
-  void _updateCurrentAlbumFromProvider(TrackPlayerProvider trackPlayerProvider) {
+  // --- MODIFICATION 1: Add forceScroll parameter ---
+  void _updateCurrentAlbumFromProvider(TrackPlayerProvider trackPlayerProvider, {bool forceScroll = false}) {
     final currentlyPlayingSong = trackPlayerProvider.currentTrack;
+
     if (currentlyPlayingSong == null && _currentAlbumName != null) {
       setState(() {
         _currentAlbumName = null;
@@ -69,14 +73,23 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
       });
       return;
     }
+
     if (currentlyPlayingSong != null) {
       final newAlbumArt = trackPlayerProvider.currentAlbumArt;
       final newAlbumName = currentlyPlayingSong.albumName;
-      if (newAlbumArt != _currentAlbumArt || newAlbumName != _currentAlbumName) {
+
+      final bool albumHasChanged = newAlbumArt != _currentAlbumArt || newAlbumName != _currentAlbumName;
+
+      // Only call setState if data has changed to prevent unnecessary rebuilds.
+      if (albumHasChanged) {
         setState(() {
           _currentAlbumArt = newAlbumArt;
           _currentAlbumName = newAlbumName;
         });
+      }
+
+      // Scroll if the album changed OR if we are forcing it (e.g., returning from player page).
+      if (albumHasChanged || forceScroll) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _scrollToCurrentAlbum();
         });
@@ -85,7 +98,9 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
   }
 
   void _scrollToCurrentAlbum() {
-    if (_currentAlbumName != null && _itemScrollController.isAttached) {
+    if (_currentAlbumName == null) return;
+
+    if (mounted && _itemScrollController.isAttached) {
       final albums = AlbumDataService().albums;
       final index = albums.indexWhere((album) => album.name == _currentAlbumName);
       if (index != -1) {
@@ -93,7 +108,7 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
           index: index,
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
-          alignment: 0.5,
+          alignment: 0.5, // Centers the item in the viewport
         );
       }
     }
@@ -260,7 +275,7 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
   }
 
   Widget _buildAlbumInfo(Album album, AlbumSettingsProvider albumSettings, bool isCurrentAlbum) {
-    final shadowColor = Colors.redAccent;
+    const shadowColor = Colors.redAccent;
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.only(left: 12.0),
@@ -276,7 +291,7 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
                 color: isCurrentAlbum ? Colors.yellow : Colors.white,
-                shadows: isCurrentAlbum ? [Shadow(color: shadowColor, blurRadius: 4)] : null,
+                shadows: isCurrentAlbum ? [const Shadow(color: shadowColor, blurRadius: 4)] : null,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -360,21 +375,31 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
     final isLarge = settingsProvider.fabSize == FabSize.large;
     final double fabSize = isLarge ? 70.0 : 56.0;
 
-    const String fabHeroTag = 'albums_list_fab_hero';
-
     return AnimatedPlayingFab(
-      heroTag: fabHeroTag,
+      heroTag: 'albums_list_fab_hero',
       isLoading: playerProvider.isLoading,
       isPlaying: playerProvider.isPlaying,
       hasTrack: playerProvider.currentTrack != null,
       themeColor: Colors.yellow,
       shadowColor: Colors.redAccent,
       size: fabSize,
-      onPressed: () => Navigator.pushNamed(
-        context,
-        Routes.musicPlayerPage,
-        arguments: fabHeroTag,
-      ),
+      onPressed: () async {
+        const String fabHeroTag = 'albums_list_fab_hero';
+        await Navigator.pushNamed(
+          context,
+          Routes.musicPlayerPage,
+          arguments: fabHeroTag,
+        );
+
+        if (mounted) {
+          // --- MODIFICATION 2: Call with forceScroll: true ---
+          // This forces a scroll to the current album after returning from the player page.
+          _updateCurrentAlbumFromProvider(
+            context.read<TrackPlayerProvider>(),
+            forceScroll: true,
+          );
+        }
+      },
       onLongPress: () => context.read<TrackPlayerProvider>().clearPlaylist(),
     );
   }

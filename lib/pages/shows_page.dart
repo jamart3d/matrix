@@ -46,6 +46,26 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
         setState(() {
           _originalShows = shows;
         });
+        _checkAndScrollOnLoad();
+      }
+    });
+  }
+
+  void _checkAndScrollOnLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final playerProvider = context.read<TrackPlayerProvider>();
+
+        // --- THIS IS THE FIX ---
+        // We check if a track is loaded. This is the true source of state.
+        // The check for shnid is also useful to ensure it's a "Show" track.
+        if (playerProvider.currentTrack != null && playerProvider.currentTrack!.shnid != null) {
+          setState(() {
+            _currentShowName = playerProvider.currentAlbumTitle;
+            _currentSourceShnid = playerProvider.currentTrack!.shnid;
+          });
+          _scrollToCurrentShow();
+        }
       }
     });
   }
@@ -91,13 +111,18 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     final index = sortedShows.indexWhere((show) => show.name == _currentShowName);
 
     if (index != -1) {
-      _itemScrollController.scrollTo(index: index, duration: const Duration(milliseconds: 700), curve: Curves.easeInOutCubic, alignment: 0.25);
+      _itemScrollController.scrollTo(
+        index: index,
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.25,
+      );
     }
   }
 
   List<Show> _getFilteredShows(String? category) {
     if (category == null) {
-      return _originalShows; // Return all shows
+      return _originalShows;
     }
     return _originalShows.where((show) => show.sourceCreator == category).toList();
   }
@@ -134,7 +159,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,
-        // --- UPDATED: Dynamic title ---
         title: Text(pageTitle),
         centerTitle: true,
         actions: [
@@ -213,8 +237,10 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
       isPlaying: playerProvider.isPlaying,
       hasTrack: playerProvider.currentTrack != null,
       themeColor: Colors.yellow,
+      shadowColor: Colors.redAccent,
       size: fabSize,
       onPressed: () => Navigator.pushNamed(context, Routes.showsMusicPlayerPage),
+      onLongPress: () => context.read<TrackPlayerProvider>().clearPlaylist(),
     );
   }
 
