@@ -1,21 +1,24 @@
-// lib/pages/shows_music_player_page.dart
-
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:gap/gap.dart';
-import 'package:matrix/components/player/themed_progress_bar.dart'; // Using generic themed bar
-import 'package:matrix/providers/album_settings_provider.dart';
+import 'package:flutter/services.dart';
+import 'package:matrix/components/player/shows_player/shows_player_app_bar.dart';
+import 'package:matrix/components/player/shows_player/shows_player_background.dart';
+import 'package:matrix/components/player/shows_player/shows_player_controls_area.dart';
+import 'package:matrix/components/player/shows_player/shows_player_track_list.dart';
 import 'package:matrix/providers/track_player_provider.dart';
-import 'package:matrix/utils/duration_formatter.dart';
-import 'package:matrix/components/player/buffer_info_panel.dart';
-import 'package:marquee/marquee.dart';
-// import 'package:matrix/providers/enums.dart';
-// import 'package:matrix/utils/seamless_rect_tween.dart';
+import 'package:provider/provider.dart';
 
-// --- DEFINING YELLOW THEME CONSTANTS ---
-const Color kThemeColor = Colors.yellow;
-const Color kDarkThemeColor = Color.fromARGB(255, 34, 34, 0); // Darker yellow/gold
-const Color kThemeAccentColor = Colors.redAccent; // Used for shadows/accents in Matrix theme
+// Constants for styling and layout to improve readability and maintainability.
+const double _kListItemHeight = 80.0;
+const double _kControlsAreaBottomPadding = 220.0;
+const Duration _kTrackChangeAnimationDuration = Duration(milliseconds: 600);
+const Duration _kFadeAnimationDuration = Duration(milliseconds: 300);
+const Duration _kPulseAnimationDuration = Duration(milliseconds: 1500);
+const Color _kThemeColor = Colors.yellow;
+const Color _kThemeAccentColor = Colors.redAccent;
+const List<Shadow> _kGlowShadows = [
+  Shadow(color: _kThemeAccentColor, blurRadius: 3),
+  Shadow(color: _kThemeAccentColor, blurRadius: 6),
+];
 
 class ShowsMusicPlayerPage extends StatefulWidget {
   const ShowsMusicPlayerPage({super.key});
@@ -24,169 +27,190 @@ class ShowsMusicPlayerPage extends StatefulWidget {
   State<ShowsMusicPlayerPage> createState() => _ShowsMusicPlayerPageState();
 }
 
-class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> with TickerProviderStateMixin {
+class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage>
+    with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   late final TrackPlayerProvider _playerProvider;
 
-  // Animation controllers needed for the Matrix/Styled controls
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
-  late AnimationController _trackChangeController; // Needed for play/pause animation combo
+  // Animation controllers
+  late final AnimationController _trackChangeController;
+  late final AnimationController _fadeController;
+  late final AnimationController _pulseController;
+
+  // Animations
+  late final Animation<double> _pulseAnimation;
+  late final Animation<double> _slideAnimation;
+  late final Animation<double> _fadeAnimation;
+
+  // State for tracking track changes to trigger animations
+  String _previousTrackName = '';
+  int _previousTrackIndex = -1;
+  bool _hasAnimatedOnce = false;
 
   @override
   void initState() {
     super.initState();
     _playerProvider = context.read<TrackPlayerProvider>();
-    _playerProvider.addListener(_onProviderChange); // Listener needed for track change scroll
+    _initializeState();
+    _initializeAnimations();
+    _playerProvider.addListener(_onPlayerStateChanged);
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (mounted) {
+          _scrollToCurrent(_playerProvider.currentIndex, isInitial: true);
+          _fadeController.forward();
+        }
+      });
+    });
+  }
+
+  void _initializeState() {
+    final currentTrack = _playerProvider.currentTrack;
+    if (currentTrack != null) {
+      _previousTrackName = currentTrack.trackName;
+      _previousTrackIndex = _playerProvider.currentIndex;
+    }
+  }
+
+  void _initializeAnimations() {
     _trackChangeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
+        duration: _kTrackChangeAnimationDuration, vsync: this);
+    _fadeController =
+        AnimationController(duration: _kFadeAnimationDuration, vsync: this);
+    _pulseController =
+        AnimationController(duration: _kPulseAnimationDuration, vsync: this);
 
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
-    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+    _pulseAnimation =
+        Tween<double>(begin: 0.95, end: 1.05).animate(CurvedAnimation(
+          parent: _pulseController,
+          curve: Curves.easeInOut,
+        ));
+    _slideAnimation =
+        Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+          parent: _trackChangeController,
+          curve: Curves.easeOutCubic,
+        ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut));
 
     if (_playerProvider.isPlaying) {
       _pulseController.repeat(reverse: true);
     }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _scrollToCurrent(_playerProvider.currentIndex, initial: true);
-      }
-    });
   }
 
   @override
   void dispose() {
-    _playerProvider.removeListener(_onProviderChange);
     _scrollController.dispose();
-    _pulseController.dispose();
+    _playerProvider.removeListener(_onPlayerStateChanged);
     _trackChangeController.dispose();
+    _fadeController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
-  void _onProviderChange() {
+  void _onPlayerStateChanged() {
     if (!mounted) return;
+    final currentTrack = _playerProvider.currentTrack;
     final currentIndex = _playerProvider.currentIndex;
+    final currentTrackName = currentTrack?.trackName ?? '';
+
+    if (currentIndex != _previousTrackIndex &&
+        currentTrackName != _previousTrackName) {
+      _animateTrackChange();
+      _previousTrackIndex = currentIndex;
+      _previousTrackName = currentTrackName;
+    }
 
     if (_playerProvider.isPlaying && !_pulseController.isAnimating) {
       _pulseController.repeat(reverse: true);
     } else if (!_playerProvider.isPlaying && _pulseController.isAnimating) {
       _pulseController.stop();
-      _pulseController.animateTo(0.0, duration: const Duration(milliseconds: 100));
+      _pulseController.animateTo(0.0,
+          duration: const Duration(milliseconds: 100));
     }
-
-    _scrollToCurrent(currentIndex);
+    _scrollToCurrent(_playerProvider.currentIndex);
   }
 
-  void _scrollToCurrent(int index, {bool initial = false}) {
-    if (_scrollController.hasClients && index >= 0) {
-      const itemHeight = 56.0;
-      final targetOffset = (index * itemHeight) - (MediaQuery.of(context).size.height / 4);
-      final maxScroll = _scrollController.position.maxScrollExtent;
+  void _animateTrackChange() {
+    HapticFeedback.selectionClick();
+    _hasAnimatedOnce = true;
+    _trackChangeController.forward(from: 0.0);
+    _fadeController.forward(from: 0.0);
+  }
 
-      if (initial) {
-        _scrollController.jumpTo(targetOffset.clamp(0.0, maxScroll));
+  void _scrollToCurrent(int index, {bool isInitial = false}) {
+    if (_scrollController.hasClients && index >= 0) {
+      final screenHeight = MediaQuery.sizeOf(context).height;
+      final targetOffset = (index * _kListItemHeight) - (screenHeight / 4);
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final clampedOffset = targetOffset.clamp(0.0, maxScroll);
+
+      if (isInitial) {
+        _scrollController.jumpTo(clampedOffset);
       } else {
-        _scrollController.animateTo(
-          targetOffset.clamp(0.0, maxScroll),
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
+        _scrollController.animateTo(clampedOffset,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final trackPlayerProvider = context.watch<TrackPlayerProvider>();
-    final settingsProvider = context.watch<AlbumSettingsProvider>();
-
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: Colors.black,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        centerTitle: true,
-        forceMaterialTransparency: true,
-        foregroundColor: Colors.white,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: settingsProvider.marqueePlayerTitle
-            ? SizedBox(
-          height: 30,
-          child: Marquee(
-            text: trackPlayerProvider.currentAlbumTitle,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-            velocity: 40.0,
-            blankSpace: 30.0,
-          ),
-        )
-            : Text(trackPlayerProvider.currentAlbumTitle),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            tooltip: 'Clear Playlist',
-            onPressed: () => _showClearPlaylistDialog(context, trackPlayerProvider),
-          ),
-        ],
-      ),
-      // --- MATRIX/YELLOW THEMED BODY STRUCTURE ---
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Matrix Background (using standard matrix asset and hardcoded yellow colors)
-          RepaintBoundary(
-            child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/t_steal.webp'),
-                  fit: BoxFit.cover,
-                  opacity: 0.3,
-                ),
-                gradient: LinearGradient(
-                  colors: [kDarkThemeColor, Colors.black],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
+          ShowsPlayerBackground(),
+          _ContentView(),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContentView extends StatelessWidget {
+  const _ContentView();
+
+  @override
+  Widget build(BuildContext context) {
+    // Re-access state and animations from the parent State object
+    final state = context.findAncestorStateOfType<_ShowsMusicPlayerPageState>()!;
+
+    return SafeArea(
+      child: Stack(
+        children: [
+          CustomScrollView(
+            controller: state._scrollController,
+            slivers: [
+              ShowsPlayerSliverAppBar(
+                onClearPlaylist: () => _showClearPlaylistDialog(context),
+                themeColor: _kThemeColor,
+                themeAccentColor: _kThemeAccentColor,
+                glowShadows: _kGlowShadows,
               ),
-            ),
+              ShowsPlayerTrackList(
+                slideAnimation: state._slideAnimation,
+                fadeAnimation: state._fadeAnimation,
+                hasAnimatedOnce: state._hasAnimatedOnce,
+                themeColor: _kThemeColor,
+                glowShadows: _kGlowShadows,
+              ),
+              const SliverPadding(
+                padding: EdgeInsets.only(bottom: _kControlsAreaBottomPadding),
+              ),
+            ],
           ),
-          // 2. Track List and Controls Layout
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: _buildTrackList(context, trackPlayerProvider, kThemeColor),
-                  ),
-                  _buildPlayerControls(trackPlayerProvider, kThemeColor),
-                  const Gap(24),
-                  // Using ThemedProgressBar and passing constants
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: ThemedProgressBar(
-                      provider: trackPlayerProvider,
-                      activeColor: kThemeColor,
-                      shadowColor: kThemeAccentColor,
-                      bufferColor: kThemeColor.withOpacity(0.3),
-                      overlayColor: kThemeAccentColor.withOpacity(0.2),
-                    ),
-                  ),
-                  const Gap(16),
-                  if (settingsProvider.showBufferInfo)
-                    BufferInfoPanel(provider: trackPlayerProvider),
-                  const Gap(20),
-                ],
-              ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: ShowsPlayerControlsArea(
+              trackChangeAnimation: state._trackChangeController,
+              pulseAnimation: state._pulseAnimation,
+              themeColor: _kThemeColor,
+              glowShadows: _kGlowShadows,
             ),
           ),
         ],
@@ -194,146 +218,24 @@ class _ShowsMusicPlayerPageState extends State<ShowsMusicPlayerPage> with Ticker
     );
   }
 
-  Widget _buildTrackList(BuildContext context, TrackPlayerProvider provider, Color themeColor) {
-    final playlist = provider.playlist;
-    final currentIndex = provider.currentIndex;
-
-    if (playlist.isEmpty) {
-      return const Center(
-        child: Text('Playlist is empty', style: TextStyle(color: Colors.white)),
-      );
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      padding: EdgeInsets.zero,
-      itemCount: playlist.length,
-      itemBuilder: (context, index) {
-        final track = playlist[index];
-        final isCurrentlyPlaying = index == currentIndex;
-        return ListTile(
-          title: Text(
-            track.trackName,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: isCurrentlyPlaying ? themeColor : Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          leading: Text(
-            track.trackNumber,
-            style: TextStyle(
-              color: isCurrentlyPlaying ? themeColor.withOpacity(0.8) : Colors.white70,
-            ),
-          ),
-          trailing: Text(
-            formatDurationSeconds(track.trackDuration),
-            style: TextStyle(
-              color: isCurrentlyPlaying ? themeColor.withOpacity(0.8) : Colors.white70,
-            ),
-          ),
-          onTap: () {
-            if (!isCurrentlyPlaying) {
-              provider.seekToIndex(index);
-            }
-          },
-          selected: isCurrentlyPlaying,
-          selectedTileColor: themeColor.withOpacity(0.1),
-        );
-      },
-    );
-  }
-
-  // Copied directly from MatrixMusicPlayerPage
-  Widget _buildPlayerControls(TrackPlayerProvider provider, Color themeColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.skip_previous, size: 48.0, color: Colors.white),
-          onPressed: () {
-            provider.previous();
-          },
-        ),
-        _buildPlayPauseButton(provider, themeColor),
-        IconButton(
-          icon: const Icon(Icons.skip_next, size: 48.0, color: Colors.white),
-          onPressed: () {
-            provider.next();
-          },
-        ),
-      ],
-    );
-  }
-
-  // Copied directly from MatrixMusicPlayerPage, simplified animation for this context
-  Widget _buildPlayPauseButton(TrackPlayerProvider provider, Color themeColor) {
-    const heroTag = 'play_pause_button_hero_shows_matrix_yellow';
-
-    Widget buttonContent;
-    if (provider.isLoading) {
-      buttonContent = CircularProgressIndicator(
-        strokeWidth: 3.0,
-        valueColor: AlwaysStoppedAnimation<Color>(themeColor),
-      );
-    } else {
-      buttonContent = AnimatedBuilder(
-        animation: _pulseController, // Only using pulse for simplicity
-        builder: (context, child) {
-          final scale = _pulseAnimation.value;
-          return Transform.scale(
-            scale: scale,
-            child: Icon(
-              provider.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
-              key: ValueKey(provider.isPlaying),
-              size: 64.0,
-              color: themeColor,
-            ),
-          );
-        },
-      );
-    }
-
-    return Hero(
-      tag: heroTag,
-      child: Material(
-        color: Colors.transparent,
-        child: GestureDetector(
-          onTap: () {
-            if (provider.isLoading) return;
-            if (provider.isPlaying) {
-              provider.pause();
-            } else {
-              provider.play();
-            }
-          },
-          child: SizedBox(
-            width: 64.0,
-            height: 64.0,
-            child: Center(child: buttonContent),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showClearPlaylistDialog(BuildContext context, TrackPlayerProvider provider) {
+  void _showClearPlaylistDialog(BuildContext context) {
+    final provider = context.read<TrackPlayerProvider>();
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Clear Playlist'),
-          content: const Text('Are you sure you want to clear the current playlist?'),
+          content: const Text(
+              'Are you sure you want to clear the current playlist?'),
           actions: [
-            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel')),
             TextButton(
               onPressed: () async {
-                final navigator = Navigator.of(context);
-                Navigator.of(dialogContext).pop();
                 await provider.clearPlaylist();
-                if (mounted) {
-                  navigator.pop();
+                if (context.mounted) {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
                 }
               },
               child: const Text('Clear', style: TextStyle(color: Colors.red)),

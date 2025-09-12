@@ -27,34 +27,41 @@ class BufferInfoPanel extends StatelessWidget {
       child: SafeArea(
         top: true,
         bottom: false,
-        child: StreamBuilder<ProcessingState>(
-          stream: provider.processingStateStream,
-          builder: (context, stateSnapshot) {
-            final bufferHealth = provider.getCurrentBufferHealth();
-            return Row(
-              children: [
-                Expanded(
-                  // --- WIDGET MODIFIED HERE ---
-                  // Replaced the Text widget with RichText for multi-style text.
-                  child: RichText(
+        child: Row(
+          children: [
+            // This part updates when the processing state changes
+            Expanded(
+              child: StreamBuilder<ProcessingState>(
+                stream: provider.processingStateStream,
+                builder: (context, stateSnapshot) {
+                  return RichText(
                     text: TextSpan(
-                      // Default text style for this widget.
                       style: DefaultTextStyle.of(context).style.copyWith(fontSize: 12),
                       children: <TextSpan>[
                         const TextSpan(
                           text: 'Status: ',
-                          style: TextStyle(color: Colors.white), // The label is now always white.
+                          style: TextStyle(color: Colors.white),
                         ),
                         TextSpan(
                           text: stateSnapshot.data?.name ?? 'idle',
-                          style: const TextStyle(color: Colors.green), // The value remains green.
+                          style: const TextStyle(color: Colors.green),
                         ),
                       ],
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: Column(
+                  );
+                },
+              ),
+            ),
+            // ================== MODIFICATION HERE ==================
+            // This part now updates whenever the buffered position changes,
+            // making it truly realtime.
+            Expanded(
+              child: StreamBuilder<Duration>(
+                stream: provider.bufferedPositionStream,
+                builder: (context, snapshot) {
+                  // We recalculate the health on every stream event
+                  final bufferHealth = provider.getCurrentBufferHealth();
+                  return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -72,11 +79,11 @@ class BufferInfoPanel extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ],
-            );
-          },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

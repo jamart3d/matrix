@@ -2,7 +2,6 @@
 
 import 'dart:async';
 import 'dart:math';
-// import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:matrix/components/animated_playing_fab.dart';
 import 'package:matrix/components/matrix_rain/matrix_rain_column.dart';
@@ -17,6 +16,8 @@ import 'package:matrix/helpers/shows_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:matrix/routes.dart';
 import 'package:matrix/providers/enums.dart';
+// ================== IMPORT ADDED HERE ==================
+import 'package:matrix/components/player/loading_timeout_controls.dart';
 
 class MatrixRainPage extends StatefulWidget {
   const MatrixRainPage({super.key});
@@ -264,10 +265,16 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
     final playerProvider = context.watch<TrackPlayerProvider>();
     final settingsProvider = context.watch<AlbumSettingsProvider>();
     final isSearching = _searchQuery.isNotEmpty;
+    final themeColor = _getThemeColor(settingsProvider.matrixColorTheme);
 
     return Scaffold(
       drawer: const MyDrawer(),
-      floatingActionButton: _buildFloatingActionButton(playerProvider, settingsProvider),
+      floatingActionButton: playerProvider.isLoadingTimeout
+          ? LoadingTimeoutControls(
+        provider: playerProvider,
+        themeColor: themeColor,
+      )
+          : _buildFloatingActionButton(playerProvider, settingsProvider),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('select a matrix'),

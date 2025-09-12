@@ -35,9 +35,7 @@ Future<void> playAlbumFromTracks(List<Track> tracks, {int initialIndex = 0}) asy
   await provider.replacePlaylistAndPlay(tracks, initialIndex: validInitialIndex);
 }
 
-// =======================================================================
-// === VERIFY THIS FUNCTION EXISTS EXACTLY AS WRITTEN BELOW            ===
-// =======================================================================
+
 /// Plays a specific track from a list, loading the entire list into the playlist.
 Future<void> playTrackFromAlbum(List<Track> albumTracks, Track specificTrack) async {
   if (albumTracks.isEmpty) {
@@ -84,12 +82,41 @@ String formatAlbumName(String albumName) {
   return albumName;
 }
 
-String extractDateFromAlbumName(String albumName) {
-  final parts = albumName.split('-');
-  if (parts.length >= 3) {
-    return parts.sublist(0, 3).join('-');
+// String formatAlbumName(String name) {
+//   return name.replaceAllMapped(RegExp(r'(\d{2}-\d{2}-\d{2}) - (.*)'), (match) {
+//     return '${match[2]}';
+//   });
+// }
+
+String extractDateFromAlbumName(String name) {
+  final match = RegExp(r'(\d{2}-\d{2}-\d{2})').firstMatch(name);
+  final dateString = match?.group(1);
+
+  if (dateString == null) {
+    return 'Unknown Date';
   }
-  return '';
+  final fullDateString = '19$dateString'; // e.g., "1999-12-08"
+
+  try {
+    // Parse the date string
+    final dateTime = DateTime.parse(fullDateString);
+
+    // Define month names for formatting
+    const List<String> monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    // Format into "Month Day, Year"
+    final month = monthNames[dateTime.month - 1];
+    final day = dateTime.day;
+    final year = dateTime.year;
+
+    return '$month $day, $year';
+  } catch (e) {
+    // If parsing fails for any reason, fall back to the original string
+    return dateString;
+  }
 }
 
 void preloadAlbumImages(List<Album> albums, BuildContext context) {

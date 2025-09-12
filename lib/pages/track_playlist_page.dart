@@ -2,10 +2,11 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
-
 import 'package:matrix/helpers/album_helper.dart';
+import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/utils/duration_formatter.dart';
+import 'package:matrix/utils/string_formatter.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 
@@ -71,6 +72,8 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
   }
 
   Widget _buildTrackList(TrackPlayerProvider trackPlayerProvider) {
+    final settingsProvider = context.watch<AlbumSettingsProvider>();
+
     if (trackPlayerProvider.playlist.isEmpty) {
       return const Center(
         child: Text( 'Playlist is empty', style: TextStyle(color: Colors.white, fontSize: 18)),
@@ -84,17 +87,24 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
           final track = trackPlayerProvider.playlist[index];
           final isCurrentlyPlayingTrack = index == trackPlayerProvider.currentIndex;
 
+          final formattedTitle = formatTrackTitle(
+            track.trackName,
+            hideNumber: settingsProvider.hideLeadingTrackNumberInTitle,
+          );
+
           return ListTile(
-            leading: Text(
+            leading: settingsProvider.showTrackNumbersInLists
+                ? Text(
               track.trackNumber,
               style: TextStyle(
                 color: isCurrentlyPlayingTrack ? Colors.yellow.withOpacity(0.9) : Colors.white70,
                 fontSize: 14,
                 fontStyle: FontStyle.italic,
               ),
-            ),
+            )
+                : null,
             title: Text(
-              track.trackName,
+              formattedTitle,
               softWrap: false,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -110,9 +120,6 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
             ),
             onTap: () {
               if (!isCurrentlyPlayingTrack) {
-                // ============================================================
-                // === THIS CALL WILL NOW WORK BECAUSE OF THE IMPORT ABOVE    ===
-                // ============================================================
                 playTrackFromAlbum(trackPlayerProvider.playlist, track);
               }
             },

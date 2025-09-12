@@ -26,7 +26,11 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
   late final Future<void> _initializationFuture;
   late final FixedExtentScrollController _scrollController;
   late final TrackPlayerProvider _playerProvider;
-  // Removed _previousAlbumName - no longer needed with the new lifecycle handling
+
+  // ================== CHANGE 1: ADD STATE FLAG ==================
+  // This flag will temporarily disable scrolling when a long press initiates playback.
+  bool _isLongPressPlaying = false;
+  // =============================================================
 
   @override
   void initState() {
@@ -35,25 +39,18 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
     _playerProvider = context.read<TrackPlayerProvider>();
     _playerProvider.addListener(_onPlayerChange);
     _initializationFuture = _initializeApp();
-
-    // Add this line to observe lifecycle changes
     WidgetsBinding.instance.addObserver(this);
   }
 
-  // Add this method to handle app lifecycle changes
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // When the app comes back to the foreground (e.g., returning from another page),
-      // trigger a check for the current album.
       _onPlayerChange();
     }
   }
 
-  // Combine initialization and data loading
   Future<void> _initializeApp() async {
     await AlbumDataService().init();
-    // After data is loaded, set up the initial scroll position
     _setupInitialScrollPosition();
   }
 
@@ -61,23 +58,23 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
   void dispose() {
     _playerProvider.removeListener(_onPlayerChange);
     _scrollController.dispose();
-    // Remove the observer
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  // The listener's ONLY job now is to handle the side-effect of scrolling.
-  // It no longer needs _previousAlbumName to prevent redundant calls.
+  // ================== CHANGE 2: UPDATE THE LISTENER ==================
   void _onPlayerChange() {
+    // If playback was started by a long press on this screen, ignore the change
+    // to prevent the wheel from scrolling.
+    if (_isLongPressPlaying) return;
+
     final currentAlbumName = _playerProvider.currentTrack?.albumName;
     if (currentAlbumName != null) {
-      // Always try to scroll to the playing album when _onPlayerChange is called.
-      // _scrollToPlayingAlbum will prevent unnecessary animations if already there.
       _scrollToPlayingAlbum(currentAlbumName);
     }
   }
+  // =================================================================
 
-  // This method now only runs once after the initial data load.
   void _setupInitialScrollPosition() {
     final currentlyPlaying = _playerProvider.currentTrack;
     if (!mounted || currentlyPlaying == null) return;
@@ -113,7 +110,6 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
 
   @override
   Widget build(BuildContext context) {
-    // Watch the provider here. This will cause the page to rebuild when the player state changes.
     final playerProvider = context.watch<TrackPlayerProvider>();
 
     return Scaffold(
@@ -135,9 +131,8 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
             return const Center(child: Text("No albums available."));
           }
 
-          // --- STATE IS NOW DERIVED DIRECTLY FROM THE PROVIDER ---
           final highlightedAlbumName = playerProvider.currentTrack?.albumName;
-          final currentAlbumArt = playerProvider.currentAlbumArt; // Use the provider's art
+          final currentAlbumArt = playerProvider.currentAlbumArt;
 
           return Container(
             decoration: BoxDecoration(
@@ -192,7 +187,6 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
         return NotificationListener<ScrollNotification>(
           onNotification: (notification) {
             if (notification is ScrollUpdateNotification) {
-              // Trigger haptic feedback when scrolling snaps to a new item
               if (notification.metrics.pixels % itemExtent < 1) {
                 HapticFeedback.selectionClick();
               }
@@ -206,7 +200,6 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
             perspective: 0.002,
             physics: const FixedExtentScrollPhysics(),
             onSelectedItemChanged: (index) {
-              // Trigger haptic feedback when item selection changes
               HapticFeedback.mediumImpact();
             },
             childDelegate: ListWheelChildBuilderDelegate(
@@ -224,7 +217,15 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
                       ),
                     ),
                   ),
-                  onLongPress: () => playAlbumFromTracks(album.tracks),
+                  // ================== CHANGE 3: MODIFY ONLONGPRESS ==================
+                  onLongPress: () async {
+                    // Set the flag to true before starting playback.
+                    _isLongPressPlaying = true;
+                    await playAlbumFromTracks(album.tracks);
+                    // IMPORTANT: Set the flag back to false after playback has started.
+                    _isLongPressPlaying = false;
+                  },
+                  // ================================================================
                   child: _buildWheelItem(album, albumSettings, itemExtent, highlightedAlbumName),
                 );
               },
@@ -256,7 +257,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
           fit: StackFit.expand,
           children: [
             Image.asset(album.albumArt, fit: BoxFit.cover, gaplessPlayback: true),
-            if (album.releaseNumber == 105) // Example conditional icon
+            if (album.releaseNumber == 105)
               const Positioned(
                 bottom: 8,
                 right: 8,
@@ -329,7 +330,6 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
             arguments: fabHeroTag,
           );
         } else {
-          // Optionally, show a message if no track is playing
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No track is currently playing')),
           );

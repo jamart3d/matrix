@@ -44,3 +44,7 @@ enum MatrixFontSize { small, medium, large }
 
 /// Defines the style of the leading (brightest) characters in the Matrix Rain.
 enum LeadingCharacterStyle { chaotic, year, none }
+
+// ================== ENUM ADDED HERE ==================
+/// Defines the font size for track lists on the Shows page.
+enum ShowsPageFontSize { normal, large }

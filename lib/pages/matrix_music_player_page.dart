@@ -2,15 +2,17 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gap/gap.dart'; // <-- ADDED IMPORT
+import 'package:gap/gap.dart';
 import 'package:matrix/components/player/buffer_info_panel.dart';
 import 'package:matrix/components/player/themed_progress_bar.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/utils/duration_formatter.dart';
+import 'package:matrix/utils/string_formatter.dart';
 import 'package:matrix/utils/theme_helper.dart';
 import 'package:marquee/marquee.dart';
 import 'package:provider/provider.dart';
+import 'package:matrix/components/player/loading_timeout_controls.dart';
 
 class MatrixMusicPlayerPage extends StatefulWidget {
   const MatrixMusicPlayerPage({super.key});
@@ -172,6 +174,11 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
     final darkThemeColor = getDarkThemeColor(theme);
     final themeAccentColor = getThemeAccentColor(theme);
 
+    final List<Shadow> glowShadows = [
+      Shadow(color: themeAccentColor, blurRadius: 3),
+      Shadow(color: themeAccentColor, blurRadius: 6),
+    ];
+
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
@@ -203,11 +210,9 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
           ),
         ],
       ),
-      // --- BODY RESTRUCTURED ---
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Background is preserved
           RepaintBoundary(
             child: Container(
               decoration: BoxDecoration(
@@ -224,16 +229,21 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
               ),
             ),
           ),
-          // 2. Layout from ShowsMusicPlayerPage is placed on top
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 2.0),
               child: Column(
                 children: [
                   Expanded(
-                    child: _buildTrackList(context, trackPlayerProvider, themeColor),
+                    child: _buildTrackList(context, trackPlayerProvider, themeColor, glowShadows),
                   ),
-                  _buildPlayerControls(trackPlayerProvider, themeColor),
+                  if (trackPlayerProvider.isLoadingTimeout)
+                    LoadingTimeoutControls(
+                      provider: trackPlayerProvider,
+                      themeColor: themeColor,
+                    )
+                  else
+                    _buildPlayerControls(trackPlayerProvider, themeColor),
                   const Gap(24),
                   ThemedProgressBar(
                     provider: trackPlayerProvider,
@@ -255,7 +265,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
     );
   }
 
-  Widget _buildTrackList(BuildContext context, TrackPlayerProvider provider, Color themeColor) {
+  Widget _buildTrackList(BuildContext context, TrackPlayerProvider provider, Color themeColor, List<Shadow> glowShadows) {
     final playlist = provider.playlist;
     final currentIndex = provider.currentIndex;
 
@@ -265,15 +275,14 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
       );
     }
 
-    // This SafeArea is no longer needed as the parent Column is wrapped in one.
     return ListView.separated(
       controller: _scrollController,
-      padding: EdgeInsets.zero, // Padding is handled by the parent
+      padding: EdgeInsets.zero,
       itemCount: playlist.length,
       separatorBuilder: (context, index) => const Divider(
         height: 1,
         color: Colors.white10,
-        indent: 16,
+        indent: 8,
         endIndent: 16,
       ),
       itemBuilder: (context, index) {
@@ -295,7 +304,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
                 opacity: opacity,
                 child: Transform.translate(
                   offset: offset,
-                  child: _buildTrackTile(track, index, isCurrentlyPlaying, themeColor, provider),
+                  child: _buildTrackTile(track, index, isCurrentlyPlaying, themeColor, provider, glowShadows),
                 ),
               );
             },
@@ -305,7 +314,15 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
     );
   }
 
-  Widget _buildTrackTile(dynamic track, int index, bool isCurrentlyPlaying, Color themeColor, TrackPlayerProvider provider) {
+  Widget _buildTrackTile(dynamic track, int index, bool isCurrentlyPlaying, Color themeColor, TrackPlayerProvider provider, List<Shadow> glowShadows) {
+    final settingsProvider = context.watch<AlbumSettingsProvider>();
+    final isThisTrackInTimeout = isCurrentlyPlaying && provider.isLoadingTimeout;
+
+    final formattedTitle = formatTrackTitle(
+      track.trackName,
+      hideNumber: settingsProvider.hideLeadingTrackNumberInTitle,
+    );
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
@@ -318,23 +335,53 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
             ? Border.all(color: themeColor.withOpacity(0.3), width: 1)
             : null,
       ),
-      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+      margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.0),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-        title: AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 300),
-          style: TextStyle(
-            color: isCurrentlyPlaying ? themeColor : Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: isCurrentlyPlaying ? 16.0 : 14.0,
-          ),
-          child: Text(
-            track.trackName,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-          ),
+        contentPadding: EdgeInsets.only(
+          left: settingsProvider.showTrackNumbersInLists ? 4.0 : 16.0,
+          right: 4.0,
+          top: 4.0,
+          bottom: 4.0,
         ),
-        leading: AnimatedContainer(
+        title: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final style = TextStyle(
+              color: isCurrentlyPlaying ? themeColor : Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: isCurrentlyPlaying ? 28.0 : 26.0,
+              shadows: isCurrentlyPlaying ? glowShadows : null,
+            );
+
+            final textPainter = TextPainter(
+              text: TextSpan(text: formattedTitle, style: style),
+              maxLines: 1,
+              textDirection: TextDirection.ltr,
+            )..layout(minWidth: 0, maxWidth: double.infinity);
+
+            if (textPainter.width > constraints.maxWidth) {
+              return SizedBox(
+                height: 42,
+                child: Marquee(
+                  text: formattedTitle,
+                  style: style,
+                  velocity: 70.0,
+                  blankSpace: 30.0,
+                  fadingEdgeStartFraction: 0.1,
+                  fadingEdgeEndFraction: 0.1,
+                ),
+              );
+            } else {
+              return Text(
+                formattedTitle,
+                style: style,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+              );
+            }
+          },
+        ),
+        leading: settingsProvider.showTrackNumbersInLists
+            ? AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           padding: EdgeInsets.all(isCurrentlyPlaying ? 8.0 : 4.0),
           decoration: BoxDecoration(
@@ -350,15 +397,20 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
                   ? themeColor.withOpacity(0.8)
                   : Colors.white70,
               fontWeight: isCurrentlyPlaying ? FontWeight.bold : FontWeight.normal,
+              shadows: isCurrentlyPlaying ? glowShadows : null,
             ),
           ),
-        ),
-        trailing: Text(
+        )
+            : null,
+        trailing: isThisTrackInTimeout
+            ? const Icon(Icons.wifi_tethering_error_rounded, color: Colors.orange, size: 28)
+            : Text(
           formatDurationSeconds(track.trackDuration),
           style: TextStyle(
             color: isCurrentlyPlaying
                 ? themeColor.withOpacity(0.8)
                 : Colors.white70,
+            shadows: isCurrentlyPlaying ? glowShadows : null,
           ),
         ),
         onTap: () {

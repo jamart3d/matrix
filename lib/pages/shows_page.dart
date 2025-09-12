@@ -3,19 +3,17 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:matrix/components/animated_playing_fab.dart';
+import 'package:matrix/components/my_drawer.dart';
+import 'package:matrix/components/shows/show_list.dart';
 import 'package:matrix/helpers/shows_helper.dart';
 import 'package:matrix/models/show.dart';
-import 'package:matrix/models/track.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
-import 'package:matrix/utils/load_shows_data.dart';
-import 'package:matrix/utils/duration_formatter.dart';
-import 'package:matrix/components/year_scrollbar.dart';
-import 'package:provider/provider.dart';
-import 'package:matrix/components/my_drawer.dart';
-import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:matrix/routes.dart';
 import 'package:matrix/providers/enums.dart';
+import 'package:matrix/routes.dart';
+import 'package:matrix/utils/load_shows_data.dart';
+import 'package:provider/provider.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 class ShowsPage extends StatefulWidget {
   const ShowsPage({super.key});
@@ -28,7 +26,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   late final Future<List<Show>> _showsFuture;
   List<Show> _originalShows = [];
   String? _currentShowName;
-  String? _currentSourceShnid;
   bool _showDeepLinkMessage = false;
 
   final ItemScrollController _itemScrollController = ItemScrollController();
@@ -55,14 +52,9 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final playerProvider = context.read<TrackPlayerProvider>();
-
-        // --- THIS IS THE FIX ---
-        // We check if a track is loaded. This is the true source of state.
-        // The check for shnid is also useful to ensure it's a "Show" track.
-        if (playerProvider.currentTrack != null && playerProvider.currentTrack!.shnid != null) {
+        if (playerProvider.currentTrack != null) {
           setState(() {
             _currentShowName = playerProvider.currentAlbumTitle;
-            _currentSourceShnid = playerProvider.currentTrack!.shnid;
           });
           _scrollToCurrentShow();
         }
@@ -81,12 +73,9 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     }
 
     final newShowName = playerProvider.currentAlbumTitle;
-    final newShnid = playerProvider.currentTrack?.shnid;
-
-    if (_currentShowName != newShowName || _currentSourceShnid != newShnid) {
+    if (_currentShowName != newShowName) {
       setState(() {
         _currentShowName = newShowName;
-        _currentSourceShnid = newShnid;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _scrollToCurrentShow();
@@ -179,7 +168,22 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
         fit: StackFit.expand,
         children: [
           _buildBlurredBackground(),
-          _buildShowsList(sortedShows),
+          FutureBuilder<List<Show>>(
+            future: _showsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Could not load shows. Error: ${snapshot.error}'));
+              }
+              return ShowList(
+                shows: sortedShows,
+                itemScrollController: _itemScrollController,
+                itemPositionsListener: _itemPositionsListener,
+              );
+            },
+          ),
           if (_showDeepLinkMessage) _buildDeepLinkNotification(),
         ],
       ),
@@ -248,107 +252,6 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     return Container(
       decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/t_steal.webp'), fit: BoxFit.cover)),
       child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), child: Container(color: Colors.black.withOpacity(0.3))),
-    );
-  }
-
-  Widget _buildShowsList(List<Show> showsToDisplay) {
-    return FutureBuilder<List<Show>>(
-      future: _showsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Could not load shows. Error: ${snapshot.error}'));
-        }
-        if (showsToDisplay.isEmpty) {
-          return const Center(child: Text('No shows found for this category.', style: TextStyle(color: Colors.white, fontSize: 16)));
-        }
-
-        final settings = context.watch<AlbumSettingsProvider>();
-        final playerProvider = context.read<TrackPlayerProvider>();
-
-        final showYears = showsToDisplay
-            .map((show) => int.tryParse(show.year) ?? 0)
-            .where((year) => year > 0)
-            .toList();
-
-        Widget mainContent = ScrollablePositionedList.builder(
-          itemScrollController: _itemScrollController,
-          itemPositionsListener: _itemPositionsListener,
-          itemCount: showsToDisplay.length,
-          itemBuilder: (context, index) => _buildShowTile(settings, playerProvider, showsToDisplay[index]),
-        );
-
-        return SafeArea(
-          child: settings.yearScrollbarBehavior != YearScrollbarBehavior.off
-              ? YearScrollbar(
-            years: showYears,
-            itemPositionsListener: _itemPositionsListener,
-            itemScrollController: _itemScrollController,
-            alwaysShow: settings.yearScrollbarBehavior == YearScrollbarBehavior.always,
-            child: mainContent,
-          )
-              : mainContent,
-        );
-      },
-    );
-  }
-
-  Widget _buildShowTile(AlbumSettingsProvider settings, TrackPlayerProvider playerProvider, Show show) {
-    final bool isCurrentShow = _currentSourceShnid != null && show.sources.containsKey(_currentSourceShnid);
-    final titleStyle = TextStyle(color: isCurrentShow ? Colors.yellow : Colors.white, fontWeight: FontWeight.bold);
-
-    return GestureDetector(
-      onLongPress: () {
-        playTracklist(playerProvider, show.primaryTracks);
-        Navigator.pushNamed(context, Routes.showsMusicPlayerPage);
-      },
-      child: Card(
-        color: isCurrentShow ? Colors.yellow.withOpacity(0.2) : Colors.black.withOpacity(0.4),
-        margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-        child: ExpansionTile(
-          key: PageStorageKey<String>(show.uniqueId),
-          title: Text(show.venue, style: titleStyle, overflow: TextOverflow.ellipsis),
-          subtitle: Text(show.sourceCount > 1 ? "${show.date} (${show.sourceCount} sources)" : show.date, style: TextStyle(color: isCurrentShow ? Colors.yellow.withOpacity(0.8) : Colors.grey.shade300)),
-          children: _buildExpansionChildren(playerProvider, show),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildExpansionChildren(TrackPlayerProvider playerProvider, Show show) {
-    if (show.sourceCount == 1) {
-      return show.sources.values.first.map((track) => _buildTrackTile(playerProvider, track, show.sources.values.first)).toList();
-    } else {
-      return show.sources.entries.map((entry) {
-        final shnid = entry.key;
-        final sourceTracks = entry.value;
-        final bool isCurrentSource = shnid == _currentSourceShnid;
-        return ExpansionTile(
-          tilePadding: const EdgeInsets.only(left: 32.0, right: 16.0),
-          title: Text("SHNID: $shnid", style: TextStyle(color: isCurrentSource ? Colors.yellow : Colors.white70, fontWeight: isCurrentSource ? FontWeight.bold : FontWeight.normal, fontStyle: FontStyle.italic, fontSize: 14)),
-          children: sourceTracks.map((track) => _buildTrackTile(playerProvider, track, sourceTracks)).toList(),
-        );
-      }).toList();
-    }
-  }
-
-  Widget _buildTrackTile(TrackPlayerProvider playerProvider, Track track, List<Track> sourceTracks) {
-    final bool isCurrentlyPlaying = playerProvider.currentTrack == track;
-    return Container(
-      color: isCurrentlyPlaying ? Colors.yellow.withOpacity(0.15) : Colors.transparent,
-      child: ListTile(
-        contentPadding: const EdgeInsets.only(left: 48.0, right: 16.0),
-        leading: Text(track.trackNumber, style: TextStyle(color: isCurrentlyPlaying ? Colors.yellow : Colors.grey.shade300)),
-        title: Text(track.trackName, style: TextStyle(color: isCurrentlyPlaying ? Colors.yellow : Colors.white)),
-        trailing: Text(formatDurationSeconds(track.trackDuration), style: TextStyle(color: isCurrentlyPlaying ? Colors.yellow.withOpacity(0.8) : Colors.grey.shade400)),
-        onTap: () {
-          playTracklistFrom(playerProvider, sourceTracks, track);
-          Navigator.pushNamed(context, Routes.showsMusicPlayerPage);
-        },
-        dense: true,
-      ),
     );
   }
 }

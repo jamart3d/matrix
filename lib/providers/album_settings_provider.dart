@@ -38,6 +38,11 @@ class AlbumSettingsProvider with ChangeNotifier {
   static const String _isHunterExpandedKey = 'isHunterExpanded';
   static const String _isMatrixExpandedKey = 'isMatrixExpanded';
   static const String _matrixHalfSpeedKey = 'matrixHalfSpeed';
+  static const String _showTrackNumbersInListsKey = 'showTrackNumbersInLists';
+  static const String _hideLeadingTrackNumberInTitleKey = 'hideLeadingTrackNumberInTitle';
+  // --- NEW KEY ADDED ---
+  static const String _showsPageFontSizeKey = 'showsPageFontSize';
+
 
   // --- SETTINGS PROPERTIES with default values ---
   LeadingCharacterStyle _leadingCharacterStyle = LeadingCharacterStyle.chaotic;
@@ -69,6 +74,11 @@ class AlbumSettingsProvider with ChangeNotifier {
   bool _isHunterExpanded = true;
   bool _isMatrixExpanded = true;
   bool _matrixHalfSpeed = false;
+  bool _showTrackNumbersInLists = false;
+  bool _hideLeadingTrackNumberInTitle = true;
+  // --- NEW PROPERTY ADDED ---
+  ShowsPageFontSize _showsPageFontSize = ShowsPageFontSize.normal;
+
 
   // --- PUBLIC GETTERS ---
   LeadingCharacterStyle get leadingCharacterStyle => _leadingCharacterStyle;
@@ -100,6 +110,11 @@ class AlbumSettingsProvider with ChangeNotifier {
   bool get isHunterExpanded => _isHunterExpanded;
   bool get isMatrixExpanded => _isMatrixExpanded;
   bool get matrixHalfSpeed => _matrixHalfSpeed;
+  bool get showTrackNumbersInLists => _showTrackNumbersInLists;
+  bool get hideLeadingTrackNumberInTitle => _hideLeadingTrackNumberInTitle;
+  // --- NEW GETTER ADDED ---
+  ShowsPageFontSize get showsPageFontSize => _showsPageFontSize;
+
 
   AlbumSettingsProvider() {
     _loadSettings();
@@ -138,6 +153,11 @@ class AlbumSettingsProvider with ChangeNotifier {
     _isHunterExpanded = prefs.getBool(_isHunterExpandedKey) ?? _isHunterExpanded;
     _isMatrixExpanded = prefs.getBool(_isMatrixExpandedKey) ?? _isMatrixExpanded;
     _matrixHalfSpeed = prefs.getBool(_matrixHalfSpeedKey) ?? _matrixHalfSpeed;
+    _showTrackNumbersInLists = prefs.getBool(_showTrackNumbersInListsKey) ?? _showTrackNumbersInLists;
+    _hideLeadingTrackNumberInTitle = prefs.getBool(_hideLeadingTrackNumberInTitleKey) ?? _hideLeadingTrackNumberInTitle;
+    // --- LOAD NEW SETTING ---
+    _showsPageFontSize = ShowsPageFontSize.values[prefs.getInt(_showsPageFontSizeKey) ?? _showsPageFontSize.index];
+
 
     notifyListeners();
   }
@@ -185,4 +205,8 @@ class AlbumSettingsProvider with ChangeNotifier {
   void setHunterExpanded(bool v) => _updateValue(_isHunterExpandedKey, v, () => _isHunterExpanded = v);
   void setMatrixExpanded(bool v) => _updateValue(_isMatrixExpandedKey, v, () => _isMatrixExpanded = v);
   void setMatrixHalfSpeed(bool v) => _updateValue(_matrixHalfSpeedKey, v, () => _matrixHalfSpeed = v);
+  void setShowTrackNumbersInLists(bool v) => _updateValue(_showTrackNumbersInListsKey, v, () => _showTrackNumbersInLists = v);
+  void setHideLeadingTrackNumberInTitle(bool v) => _updateValue(_hideLeadingTrackNumberInTitleKey, v, () => _hideLeadingTrackNumberInTitle = v);
+  // --- NEW SETTER ADDED ---
+  void setShowsPageFontSize(ShowsPageFontSize v) => _updateValue(_showsPageFontSizeKey, v.index, () => _showsPageFontSize = v);
 }

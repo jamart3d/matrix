@@ -9,7 +9,7 @@ class YearScrollbar extends StatefulWidget {
   final List<int> years;
   final ItemPositionsListener itemPositionsListener;
   final bool alwaysShow;
-  final ItemScrollController? itemScrollController; // Added this parameter
+  final ItemScrollController? itemScrollController;
 
   const YearScrollbar({
     super.key,
@@ -17,7 +17,7 @@ class YearScrollbar extends StatefulWidget {
     required this.years,
     required this.itemPositionsListener,
     this.alwaysShow = false,
-    this.itemScrollController, // Added optional parameter
+    this.itemScrollController,
   });
 
   @override
@@ -30,6 +30,10 @@ class _YearScrollbarState extends State<YearScrollbar> {
   bool _isScrolling = false;
   bool _isDragging = false;
   int _currentYearIndex = 0;
+
+  // Add these for debouncing
+  bool _isUserScrolling = false;
+  DateTime _lastScrollTime = DateTime.now();
 
   @override
   void initState() {
@@ -54,12 +58,46 @@ class _YearScrollbarState extends State<YearScrollbar> {
     final year = widget.years[safeIndex];
     final yearStr = (year % 100).toString().padLeft(2, '0');
 
+    // Only update if values actually changed
     if (_currentYear != yearStr || _currentYearIndex != safeIndex) {
       setState(() {
         _currentYear = yearStr;
         _currentYearIndex = safeIndex;
       });
     }
+
+    // If not dragging and not always shown, detect user scrolling with debounce
+    if (!_isDragging && !widget.alwaysShow) {
+      final now = DateTime.now();
+      final timeSinceLastScroll = now.difference(_lastScrollTime).inMilliseconds;
+
+      // Only show scrollbar if this seems like actual user scrolling
+      // (rapid position changes suggest user interaction)
+      if (timeSinceLastScroll < 100) {
+        if (!_isUserScrolling) {
+          setState(() {
+            _isUserScrolling = true;
+            _isScrolling = true;
+          });
+        }
+
+        // Reset hide timer
+        _scheduleHideScrollbar();
+      }
+
+      _lastScrollTime = now;
+    }
+  }
+
+  void _scheduleHideScrollbar() {
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted && !widget.alwaysShow && !_isDragging) {
+        setState(() {
+          _isUserScrolling = false;
+          _isScrolling = false;
+        });
+      }
+    });
   }
 
   void _onPanStart(DragStartDetails details) {
@@ -67,30 +105,23 @@ class _YearScrollbarState extends State<YearScrollbar> {
       _logger.d("Drag started at: ${details.localPosition}");
       _isDragging = true;
       _isScrolling = true;
+      _isUserScrolling = true;
     });
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
     if (widget.itemScrollController == null || widget.years.isEmpty) return;
 
-    // Get the render box to calculate positions
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    final scrollbarHeight = renderBox.size.height - 40; // Account for padding
-
-    // Use global position and convert to local
+    final scrollbarHeight = renderBox.size.height - 40;
     final globalPosition = details.globalPosition;
     final localPosition = renderBox.globalToLocal(globalPosition);
-
-    // Calculate relative position (0.0 to 1.0)
     final relativeY = ((localPosition.dy - 20) / scrollbarHeight).clamp(0.0, 1.0);
-
-    // Map to year index
     final targetIndex = (relativeY * (widget.years.length - 1)).round();
     final clampedIndex = targetIndex.clamp(0, widget.years.length - 1);
 
-    // Update UI immediately
     final year = widget.years[clampedIndex];
     final yearStr = (year % 100).toString().padLeft(2, '0');
 
@@ -101,7 +132,6 @@ class _YearScrollbarState extends State<YearScrollbar> {
       });
     }
 
-    // Scroll to the position
     widget.itemScrollController!.jumpTo(index: clampedIndex);
   }
 
@@ -110,42 +140,39 @@ class _YearScrollbarState extends State<YearScrollbar> {
       _isDragging = false;
     });
 
-    // Hide scrollbar after delay if not always shown
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted && !widget.alwaysShow) {
-        setState(() {
-          _isScrolling = false;
-        });
-      }
-    });
+    if (!widget.alwaysShow) {
+      _scheduleHideScrollbar();
+    }
   }
 
   void _onTap(TapUpDetails details) {
     if (widget.itemScrollController == null || widget.years.isEmpty) return;
 
-    // Get the render box to calculate positions
+    // Show scrollbar for tap interaction
+    setState(() {
+      _isScrolling = true;
+      _isUserScrolling = true;
+    });
+
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    final scrollbarHeight = renderBox.size.height - 40; // Account for padding
-
-    // Use global position and convert to local
+    final scrollbarHeight = renderBox.size.height - 40;
     final globalPosition = details.globalPosition;
     final localPosition = renderBox.globalToLocal(globalPosition);
-
-    // Calculate relative position (0.0 to 1.0)
     final relativeY = ((localPosition.dy - 20) / scrollbarHeight).clamp(0.0, 1.0);
-
-    // Map to year index
     final targetIndex = (relativeY * (widget.years.length - 1)).round();
     final clampedIndex = targetIndex.clamp(0, widget.years.length - 1);
 
-    // Smooth scroll to the position
     widget.itemScrollController!.scrollTo(
       index: clampedIndex,
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOutCubic,
     );
+
+    if (!widget.alwaysShow) {
+      _scheduleHideScrollbar();
+    }
   }
 
   @override
@@ -156,53 +183,38 @@ class _YearScrollbarState extends State<YearScrollbar> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine if the scrollbar should be visible based on the new logic.
     final bool shouldBeVisible = _isScrolling || widget.alwaysShow;
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification notification) {
-        if (notification is ScrollStartNotification && !_isDragging) {
-          setState(() => _isScrolling = true);
-        } else if (notification is ScrollEndNotification && !_isDragging) {
-          Future.delayed(const Duration(seconds: 1), () {
-            if (mounted && !widget.alwaysShow && !_isDragging) {
-              setState(() => _isScrolling = false);
-            }
-          });
-        }
-        return false;
-      },
-      child: Stack(
-        children: [
-          widget.child,
+    return Stack(
+      children: [
+        widget.child,
 
-          // Interactive scrollbar area
-          if (shouldBeVisible)
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              child: SizedBox(
-                width: 60, // Wider touch area
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent, // Important for detecting touches
-                  onPanStart: _onPanStart,
-                  onPanUpdate: _onPanUpdate,
-                  onPanEnd: _onPanEnd,
-                  onTapUp: _onTap,
-                  child: CustomPaint(
-                    painter: YearScrollbarPainter(
-                      currentYear: _currentYear,
-                      isDragging: _isDragging,
-                      progress: widget.years.isEmpty ? 0.0 : _currentYearIndex / (widget.years.length - 1),
-                    ),
-                    size: const Size(60, double.infinity),
+        // Interactive scrollbar area
+        if (shouldBeVisible)
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: SizedBox(
+              width: 60,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onPanStart: _onPanStart,
+                onPanUpdate: _onPanUpdate,
+                onPanEnd: _onPanEnd,
+                onTapUp: _onTap,
+                child: CustomPaint(
+                  painter: YearScrollbarPainter(
+                    currentYear: _currentYear,
+                    isDragging: _isDragging,
+                    progress: widget.years.isEmpty ? 0.0 : _currentYearIndex / (widget.years.length - 1),
                   ),
+                  size: const Size(60, double.infinity),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

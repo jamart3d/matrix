@@ -49,7 +49,6 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
   void didChangeDependencies() {
     super.didChangeDependencies();
     final trackPlayerProvider = context.watch<TrackPlayerProvider>();
-    // Default call: preserves scroll state unless the song changes.
     _updateCurrentAlbumFromProvider(trackPlayerProvider);
   }
 
@@ -59,10 +58,12 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
       preloadAlbumImages(AlbumDataService().albums, context);
       _connectionChecked = true;
     }
-    _scrollToCurrentAlbum();
+    // Initial scroll when data first loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scrollToCurrentAlbum();
+    });
   }
 
-  // --- MODIFICATION 1: Add forceScroll parameter ---
   void _updateCurrentAlbumFromProvider(TrackPlayerProvider trackPlayerProvider, {bool forceScroll = false}) {
     final currentlyPlayingSong = trackPlayerProvider.currentTrack;
 
@@ -77,10 +78,8 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
     if (currentlyPlayingSong != null) {
       final newAlbumArt = trackPlayerProvider.currentAlbumArt;
       final newAlbumName = currentlyPlayingSong.albumName;
-
       final bool albumHasChanged = newAlbumArt != _currentAlbumArt || newAlbumName != _currentAlbumName;
 
-      // Only call setState if data has changed to prevent unnecessary rebuilds.
       if (albumHasChanged) {
         setState(() {
           _currentAlbumArt = newAlbumArt;
@@ -88,7 +87,6 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
         });
       }
 
-      // Scroll if the album changed OR if we are forcing it (e.g., returning from player page).
       if (albumHasChanged || forceScroll) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _scrollToCurrentAlbum();
@@ -98,20 +96,31 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
   }
 
   void _scrollToCurrentAlbum() {
-    if (_currentAlbumName == null) return;
+    if (_currentAlbumName == null || !mounted || !_itemScrollController.isAttached) {
+      return;
+    }
 
-    if (mounted && _itemScrollController.isAttached) {
-      final albums = AlbumDataService().albums;
-      final index = albums.indexWhere((album) => album.name == _currentAlbumName);
-      if (index != -1) {
-        _itemScrollController.scrollTo(
-          index: index,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-          alignment: 0.5, // Centers the item in the viewport
-        );
+    final albums = AlbumDataService().albums;
+    final index = albums.indexWhere((album) => album.name == _currentAlbumName);
+    if (index == -1) return;
+
+    final visibleItems = _itemPositionsListener.itemPositions.value;
+    if (visibleItems.isNotEmpty) {
+      final isItemVisible = visibleItems.any((item) => item.index == index);
+      if (isItemVisible) {
+        final itemPosition = visibleItems.firstWhere((item) => item.index == index);
+        if (itemPosition.itemLeadingEdge >= -0.01 && itemPosition.itemTrailingEdge <= 1.01) {
+          return; // Item is fully visible, do not scroll.
+        }
       }
     }
+
+    _itemScrollController.scrollTo(
+      index: index,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+      alignment: 0.5,
+    );
   }
 
   @override
@@ -392,8 +401,6 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
         );
 
         if (mounted) {
-          // --- MODIFICATION 2: Call with forceScroll: true ---
-          // This forces a scroll to the current album after returning from the player page.
           _updateCurrentAlbumFromProvider(
             context.read<TrackPlayerProvider>(),
             forceScroll: true,

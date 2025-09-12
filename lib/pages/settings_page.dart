@@ -130,6 +130,14 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
+  // --- NEW HELPER FUNCTION ADDED ---
+  String _getShowsPageFontSizeText(ShowsPageFontSize size) {
+    switch (size) {
+      case ShowsPageFontSize.normal: return 'Normal (Default)';
+      case ShowsPageFontSize.large: return 'Large';
+    }
+  }
+
   Color _getLeadingColorValue(MatrixLeadingColor color) {
     switch (color) {
       case MatrixLeadingColor.white: return Colors.white;
@@ -235,6 +243,30 @@ class SettingsPage extends StatelessWidget {
                       icon: const Icon(Icons.arrow_drop_down, color: iconColor),
                     ),
                   ),
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.only(left: 32, right: 16),
+                    title: const Text('Show Track Numbers', style: titleStyle),
+                    subtitle: Text('Displays separate track number column.', style: subtitleStyle),
+                    value: settings.showTrackNumbersInLists,
+                    onChanged: settings.setShowTrackNumbersInLists,
+                    secondary: const Icon(Icons.format_list_numbered, color: iconColor),
+                    activeColor: Colors.yellow,
+                  ),
+                  // --- NEW WIDGET ADDED ---
+                  ListTile(
+                    contentPadding: const EdgeInsets.only(left: 32, right: 16),
+                    leading: const Icon(Icons.format_size, color: iconColor),
+                    title: const Text('Track List Font Size', style: titleStyle),
+                    subtitle: Text(_getShowsPageFontSizeText(settings.showsPageFontSize), style: subtitleStyle),
+                    trailing: PopupMenuButton<ShowsPageFontSize>(
+                      onSelected: settings.setShowsPageFontSize,
+                      itemBuilder: (ctx) => ShowsPageFontSize.values.map((size) => PopupMenuItem(
+                        value: size,
+                        child: Text(_getShowsPageFontSizeText(size)),
+                      )).toList(),
+                      icon: const Icon(Icons.arrow_drop_down, color: iconColor),
+                    ),
+                  ),
                 ],
               ),
               const Divider(color: Colors.white24, height: 1),
@@ -251,7 +283,16 @@ class SettingsPage extends StatelessWidget {
                     subtitle: Text('Scroll long titles in the player app bar.', style: subtitleStyle),
                     value: settings.marqueePlayerTitle,
                     onChanged: settings.setMarqueePlayerTitle,
-                    secondary: const Icon(Icons.text_format, color: iconColor),
+                    secondary: const Icon(Icons.text_fields, color: iconColor),
+                    activeColor: Colors.yellow,
+                  ),
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.only(left: 32, right: 16),
+                    title: const Text('Hide Track Number', style: titleStyle),
+                    subtitle: Text('Removes numbers like "01." from track names.', style: subtitleStyle),
+                    value: settings.hideLeadingTrackNumberInTitle,
+                    onChanged: settings.setHideLeadingTrackNumberInTitle,
+                    secondary: const Icon(Icons.title, color: iconColor),
                     activeColor: Colors.yellow,
                   ),
                   SwitchListTile(
@@ -267,7 +308,6 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.play_circle_outline, color: iconColor),
                     title: const Text('Floating Action Button Size', style: titleStyle),
-                    // --- FIX 1: Display the current FAB size ---
                     subtitle: Text('Current: ${_getFabSizeText(settings.fabSize)}', style: subtitleStyle),
                     trailing: PopupMenuButton<FabSize>(
                       onSelected: settings.setFabSize,
@@ -311,7 +351,6 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.speed, color: iconColor),
                     title: const Text('Rain Density', style: titleStyle),
-                    // --- FIX 2: Display the current Rain Density value ---
                     subtitle: Text('Current: ${settings.matrixRainSpeed.round()} - Controls how frequently new text columns appear.', style: subtitleStyle),
                   ),
                   Slider(
@@ -583,7 +622,6 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
                     leading: const Icon(Icons.brightness_6, color: iconColor),
                     title: const Text('Visual Feedback Intensity', style: titleStyle),
-                    // --- FIX 3: Display the current Feedback Intensity value ---
                     subtitle: Text('Current: ${(settings.matrixFeedbackIntensity * 100).round()}% - Controls brightness of tap and highlight effects.', style: subtitleStyle),
                   ),
                   Slider(

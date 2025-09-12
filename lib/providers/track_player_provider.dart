@@ -22,24 +22,28 @@ class TrackPlayerProvider extends ChangeNotifier {
   List<Track> _playlist = [];
   int _currentIndex = 0;
   String? _cachedAlbumArt;
-  bool _isLoading = false; // This is now ONLY controlled by the stream listener
+  bool _isLoading = false;
   bool _isPlaying = false;
   String? _lastError;
-
-  // **** ADDED FOR DEEP LINK FIX ****
   bool _wasInitiatedByDeepLink = false;
-
   final Map<String, Future<Uri>> _tempFileUriCache = {};
+
+  // ================== NEW STATE FOR TIMEOUT ==================
+  Timer? _loadingTimer;
+  bool _isLoadingTimeout = false; // Is the player in a timeout state?
+  String? _loadingError; // A specific error message for loading failures
+  // ==========================================================
 
   // --- PUBLIC GETTERS ---
   bool get isPlaying => _isPlaying;
   bool get isLoading => _isLoading;
   String? get lastError => _lastError;
   int get currentIndex => _currentIndex;
-
-  // **** ADDED FOR DEEP LINK FIX ****
   bool get wasInitiatedByDeepLink => _wasInitiatedByDeepLink;
-
+  // ================== NEW GETTERS FOR TIMEOUT =================
+  bool get isLoadingTimeout => _isLoadingTimeout;
+  String? get loadingError => _loadingError;
+  // ===========================================================
 
   Track? get currentTrack =>
       _playlist.isNotEmpty && _currentIndex >= 0 && _currentIndex < _playlist.length
@@ -52,38 +56,31 @@ class TrackPlayerProvider extends ChangeNotifier {
   String get currentArtistName => currentTrack?.artistName ?? 'Unknown Artist';
   String get currentAlbumTitle => currentTrack?.albumName ?? 'Unknown Album';
 
-  // --- DURATION & POSITION GETTERS ---
   Duration get currentDuration => _audioPlayer.position;
   Duration get totalDuration => _audioPlayer.duration ?? Duration.zero;
   String get formattedCurrentDuration => formatDuration(currentDuration);
   String get formattedTotalDuration => formatDuration(totalDuration);
 
-  // --- STREAMS ---
   Stream<Duration> get positionStream => _audioPlayer.positionStream;
   Stream<Duration> get bufferedPositionStream => _audioPlayer.bufferedPositionStream;
   Stream<PlayerState> get playerStateStream => _audioPlayer.playerStateStream;
   Stream<ProcessingState> get processingStateStream => _audioPlayer.processingStateStream;
   Stream<Duration?> get durationStream => _audioPlayer.durationStream;
 
-  // --- BUFFER HELPERS ---
   double getCurrentBufferHealth() {
     final duration = _audioPlayer.duration;
     final position = _audioPlayer.position;
     final buffered = _audioPlayer.bufferedPosition;
 
     if (duration == null) return 0.0;
-
     final remainingDuration = duration - position;
     if (remainingDuration.inMilliseconds <= 0) return 100.0;
-
     final availableBuffer = buffered - position;
     if (availableBuffer.inMilliseconds <= 0) return 0.0;
-
     return (availableBuffer.inMilliseconds / remainingDuration.inMilliseconds * 100).clamp(0.0, 100.0);
   }
 
   Duration get currentBufferedPosition => _audioPlayer.bufferedPosition;
-
   bool get isBuffering => _audioPlayer.processingState == ProcessingState.buffering || _audioPlayer.processingState == ProcessingState.loading;
 
   TrackPlayerProvider() {
@@ -93,31 +90,35 @@ class TrackPlayerProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _loadingTimer?.cancel();
     _audioPlayer.dispose();
     super.dispose();
   }
 
-  // **** ADDED FOR DEEP LINK FIX ****
-  /// Sets a flag to indicate playback was started via a deep link.
   void setInitiatedByDeepLink() {
     _wasInitiatedByDeepLink = true;
-    // No need to call notifyListeners() for this.
   }
 
-  // **** ADDED FOR DEEP LINK FIX ****
-  /// Consumes the deep link flag after it has been checked.
   void consumeDeepLinkInitiation() {
     _wasInitiatedByDeepLink = false;
   }
 
   void _listenToAudioPlayerEvents() {
-    // This listener is now the SINGLE, RELIABLE source of truth for the loading state.
     _audioPlayer.playerStateStream.listen((state) {
       final newIsPlaying = state.playing;
       final newIsLoading = state.processingState == ProcessingState.loading ||
           state.processingState == ProcessingState.buffering;
 
-      // Only notify listeners if a relevant state has actually changed.
+      // When loading starts, start the timeout timer
+      if (newIsLoading && !_isLoading) {
+        _startLoadingTimer();
+      }
+
+      // If loading finishes or playback starts, cancel the timer
+      if ((!newIsLoading && _isLoading) || newIsPlaying) {
+        _resetLoadingState();
+      }
+
       if (_isPlaying != newIsPlaying || _isLoading != newIsLoading) {
         _isPlaying = newIsPlaying;
         _isLoading = newIsLoading;
@@ -132,6 +133,43 @@ class TrackPlayerProvider extends ChangeNotifier {
       }
     });
   }
+
+  // ================== NEW METHODS FOR TIMEOUT ==================
+  void _startLoadingTimer() {
+    _loadingTimer?.cancel(); // Cancel any existing timer
+    _isLoadingTimeout = false;
+    _loadingError = null;
+
+    _loadingTimer = Timer(const Duration(seconds: 15), () {
+      if (_isLoading) { // Only fire if we are still in a loading state
+        _logger.w("Loading timed out after 15 seconds.");
+        _isLoadingTimeout = true;
+        _loadingError = "This is taking a while. The network may be slow or the track unavailable.";
+        _isLoading = false; // Stop showing the generic spinner
+        notifyListeners();
+      }
+    });
+  }
+
+  void _resetLoadingState() {
+    _loadingTimer?.cancel();
+    if (_isLoadingTimeout || _loadingError != null) {
+      _isLoadingTimeout = false;
+      _loadingError = null;
+      // No need to notify here, will be handled by the state change that triggered the reset
+    }
+  }
+
+  /// Retries loading the current track.
+  Future<void> retryCurrentTrack() async {
+    _resetLoadingState();
+    _isLoading = true;
+    notifyListeners();
+
+    // Re-seek to the current index to trigger a reload.
+    await seekToIndex(_currentIndex, forceReload: true);
+  }
+  // =============================================================
 
   void _loadPlaylistMetadata() {
     final track = currentTrack;
@@ -154,9 +192,7 @@ class TrackPlayerProvider extends ChangeNotifier {
 
   Future<void> replacePlaylistAndPlay(List<Track> tracks, {int initialIndex = 0}) async {
     _logger.i("Replacing playlist with ${tracks.length} tracks...");
-
-    // Manual flags are removed to prevent the race condition.
-    // The playerStateStream listener will now exclusively handle the isLoading state.
+    _resetLoadingState(); // Reset timeout state on new playlist
 
     try {
       await _audioPlayer.stop();
@@ -166,7 +202,6 @@ class TrackPlayerProvider extends ChangeNotifier {
       _loadPlaylistMetadata();
 
       if (_playlist.isEmpty) {
-        // If playlist is empty, manually ensure loading is false and notify.
         if (_isLoading) {
           _isLoading = false;
           notifyListeners();
@@ -177,9 +212,6 @@ class TrackPlayerProvider extends ChangeNotifier {
       final artUri = await _getUriForAsset(currentAlbumArt);
       final audioSources = await Future.wait(_playlist.map((track) => _createAudioSource(track, artUri)));
 
-      // The moment this is set, the playerStateStream will emit a 'loading' or 'buffering'
-      // state, which will be caught by our listener, correctly setting isLoading = true
-      // and showing the spinner on the FAB.
       await _audioPlayer.setAudioSource(
         ConcatenatingAudioSource(children: audioSources),
         initialIndex: _currentIndex,
@@ -189,10 +221,9 @@ class TrackPlayerProvider extends ChangeNotifier {
     } catch (e, s) {
       _logger.e("Error in replacePlaylistAndPlay", error: e, stackTrace: s);
       _lastError = "Failed to start playlist.";
-      // Ensure loading is turned off on error.
-      if (_isLoading) {
-        _isLoading = false;
-      }
+      _isLoading = false;
+      _isLoadingTimeout = true; // Use the timeout UI for general errors too
+      _loadingError = "Could not play this track. It may be unavailable.";
       notifyListeners();
     }
   }
@@ -225,18 +256,18 @@ class TrackPlayerProvider extends ChangeNotifier {
     );
   }
 
-  // --- PLAYBACK CONTROLS ---
-
   Future<void> play() async => _audioPlayer.play();
   Future<void> pause() async => _audioPlayer.pause();
   Future<void> seekTo(Duration position) async => _audioPlayer.seek(position);
 
-  Future<void> seekToIndex(int index) async {
+  Future<void> seekToIndex(int index, {bool forceReload = false}) async {
     if (index >= 0 && index < _playlist.length) {
       _logger.i("Seeking to playlist index: $index");
+      _resetLoadingState(); // Reset timeout state on seek
       try {
         await _audioPlayer.seek(Duration.zero, index: index);
-        if (!_isPlaying) {
+        // If we are forcing a reload (e.g. from a retry), ensure play is called.
+        if (!_isPlaying || forceReload) {
           await play();
         }
       } catch (e, s) {
@@ -246,10 +277,12 @@ class TrackPlayerProvider extends ChangeNotifier {
   }
 
   Future<void> next() async {
+    _resetLoadingState(); // Reset timeout state on next
     if (_audioPlayer.hasNext) await _audioPlayer.seekToNext();
   }
 
   Future<void> previous() async {
+    _resetLoadingState(); // Reset timeout state on previous
     if (_audioPlayer.position.inSeconds > 3) {
       await seekTo(Duration.zero);
     } else if (_audioPlayer.hasPrevious) {
@@ -259,6 +292,7 @@ class TrackPlayerProvider extends ChangeNotifier {
 
   Future<void> clearPlaylist() async {
     await _audioPlayer.stop();
+    _resetLoadingState();
     _playlist = [];
     _currentIndex = 0;
     _cachedAlbumArt = null;
