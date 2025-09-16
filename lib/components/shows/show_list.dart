@@ -1,5 +1,3 @@
-// lib/components/shows/show_list.dart
-
 import 'package:flutter/material.dart';
 import 'package:matrix/components/shows/show_tile.dart';
 import 'package:matrix/components/year_scrollbar.dart';
@@ -29,12 +27,29 @@ class _ShowListState extends State<ShowList> {
   // This state now lives here, ensuring only one tile in the entire list is open.
   String? _currentlyExpandedId;
 
+  // --- MODIFIED METHOD ---
+  // This updated logic correctly handles collapsing nested ExpansionTiles.
   void _handleExpansion(bool isExpanding, String id) {
     setState(() {
       if (isExpanding) {
+        // When expanding any tile, it becomes the currently expanded one.
         _currentlyExpandedId = id;
-      } else if (_currentlyExpandedId == id) {
-        _currentlyExpandedId = null;
+      } else {
+        // This is the collapse logic.
+        if (_currentlyExpandedId == id) {
+          // Check if the collapsing tile is a nested SHNID tile.
+          // We can identify it by the '_' separator in its ID.
+          final int separatorIndex = id.lastIndexOf('_');
+
+          if (separatorIndex != -1) {
+            // It's a nested tile. Revert the expanded ID to its parent's ID,
+            // which keeps the main show tile open.
+            _currentlyExpandedId = id.substring(0, separatorIndex);
+          } else {
+            // It's a top-level show tile. Set to null to collapse it.
+            _currentlyExpandedId = null;
+          }
+        }
       }
     });
   }

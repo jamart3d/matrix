@@ -212,8 +212,8 @@ class TrackPlayerProvider extends ChangeNotifier {
       final artUri = await _getUriForAsset(currentAlbumArt);
       final audioSources = await Future.wait(_playlist.map((track) => _createAudioSource(track, artUri)));
 
-      await _audioPlayer.setAudioSource(
-        ConcatenatingAudioSource(children: audioSources),
+      await _audioPlayer.setAudioSources(
+        audioSources,
         initialIndex: _currentIndex,
         preload: true,
       );

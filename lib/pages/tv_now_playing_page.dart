@@ -117,7 +117,7 @@
 //           child: BackdropFilter(
 //             filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
 //             child: Container(
-//               color: Colors.black.withOpacity(0.5),
+//               color: Colors.black.withValues(alpha: 0.5),
 //               child: SafeArea(
 //                 child: Row(
 //                   children: [
@@ -177,7 +177,7 @@
 //           }),
 //           child: Container(
 //             decoration: BoxDecoration(
-//               color: isFocused ? Colors.white.withOpacity(0.3) : Colors.transparent,
+//               color: isFocused ? Colors.white.withValues(alpha: 0.3) : Colors.transparent,
 //               borderRadius: BorderRadius.circular(8),
 //             ),
 //             child: ListTile(

@@ -15,8 +15,7 @@ Color getThemeColor(MatrixColorTheme theme) {
     case MatrixColorTheme.goldLux:
       return Colors.amber;
     case MatrixColorTheme.classicGreen:
-    default:
-      return Colors.green;
+    return Colors.green;
   }
 }
 
@@ -32,8 +31,7 @@ Color getDarkThemeColor(MatrixColorTheme theme) {
     case MatrixColorTheme.goldLux:
       return const Color(0xFF332200);
     case MatrixColorTheme.classicGreen:
-    default:
-      return const Color(0xFF001a00);
+    return const Color(0xFF001a00);
   }
 }
 
@@ -49,7 +47,6 @@ Color getThemeAccentColor(MatrixColorTheme theme) {
     case MatrixColorTheme.goldLux:
       return Colors.yellow;
     case MatrixColorTheme.classicGreen:
-    default:
-      return Colors.greenAccent;
+    return Colors.greenAccent;
   }
 }

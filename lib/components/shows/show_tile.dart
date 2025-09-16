@@ -70,7 +70,7 @@ class ShowTile extends StatelessWidget {
         Navigator.pushNamed(context, Routes.showsMusicPlayerPage);
       },
       child: Card(
-        color: isCurrentShow ? Colors.yellow.withOpacity(0.2) : Colors.black.withOpacity(0.4),
+        color: isCurrentShow ? Colors.yellow.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.4),
         margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
         child: ExpansionTile(
           key: ValueKey('${show.uniqueId}_$isShowExpanded'),
@@ -107,7 +107,7 @@ class ShowTile extends StatelessWidget {
           subtitle: Text(
             subtitleText,
             style: TextStyle(
-              color: isCurrentShow ? Colors.yellow.withOpacity(0.8) : Colors.grey.shade300,
+              color: isCurrentShow ? Colors.yellow.withValues(alpha: 0.8) : Colors.grey.shade300,
               fontSize: subtitleFontSize,
             ),
           ),

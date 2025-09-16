@@ -163,8 +163,7 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
       case MatrixLaneSpacing.overlap:
         return baseWidth * 0.95;
       case MatrixLaneSpacing.standard:
-      default:
-        return baseWidth * 1.15;
+      return baseWidth * 1.15;
     }
   }
 
@@ -173,7 +172,7 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
       case MatrixFontSize.small: return 12.0;
       case MatrixFontSize.large: return 20.0;
       case MatrixFontSize.medium:
-      default: return 16.0;
+      return 16.0;
     }
   }
 
@@ -256,7 +255,7 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
       case MatrixColorTheme.redAlert: return Colors.redAccent;
       case MatrixColorTheme.goldLux: return Colors.amber;
       case MatrixColorTheme.classicGreen:
-      default: return Colors.green;
+      return Colors.green;
     }
   }
 
@@ -336,7 +335,7 @@ class _MatrixRainPageState extends State<MatrixRainPage> with TickerProviderStat
       isPlaying: playerProvider.isPlaying,
       hasTrack: playerProvider.currentTrack != null,
       themeColor: themeColor,
-      shadowColor: themeColor.withOpacity(0.7),
+      shadowColor: themeColor.withValues(alpha: 0.7),
       size: fabSize,
       onPressed: () => Navigator.pushNamed(context, Routes.matrixMusicPlayerPage),
       onLongPress: () => context.read<TrackPlayerProvider>().clearPlaylist(),

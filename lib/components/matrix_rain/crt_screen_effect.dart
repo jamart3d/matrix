@@ -94,12 +94,12 @@ class _CRTScreenEffectState extends State<CRTScreenEffect>
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.cyan.withOpacity(0.1 * widget.intensity),
+              color: Colors.cyan.withValues(alpha: 0.1 * widget.intensity),
               blurRadius: 20,
               spreadRadius: 5,
             ),
             BoxShadow(
-              color: Colors.green.withOpacity(0.05 * widget.intensity),
+              color: Colors.green.withValues(alpha: 0.05 * widget.intensity),
               blurRadius: 40,
               spreadRadius: 10,
             ),
@@ -164,7 +164,7 @@ class ScanlinesPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black.withOpacity(0.03 * intensity)
+      ..color = Colors.black.withValues(alpha: 0.03 * intensity)
       ..strokeWidth = 0.5;
 
     // Draw horizontal scanlines
@@ -177,7 +177,7 @@ class ScanlinesPainter extends CustomPainter {
     }
 
     // Add occasional brighter scanlines for authenticity
-    paint.color = Colors.black.withOpacity(0.08 * intensity);
+    paint.color = Colors.black.withValues(alpha: 0.08 * intensity);
     for (double y = 0; y < size.height; y += 6) {
       canvas.drawLine(
         Offset(0, y),
@@ -203,7 +203,7 @@ class VignettePainter extends CustomPainter {
       radius: 1.0,
       colors: [
         Colors.transparent,
-        Colors.black.withOpacity(0.4 * intensity),
+        Colors.black.withValues(alpha: 0.4 * intensity),
       ],
       stops: const [0.5, 1.0],
     );
@@ -230,9 +230,9 @@ class ScreenReflectionPainter extends CustomPainter {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        Colors.white.withOpacity(0.02 * intensity),
+        Colors.white.withValues(alpha: 0.02 * intensity),
         Colors.transparent,
-        Colors.white.withOpacity(0.01 * intensity),
+        Colors.white.withValues(alpha: 0.01 * intensity),
         Colors.transparent,
       ],
       stops: const [0.0, 0.3, 0.7, 1.0],
@@ -248,7 +248,7 @@ class ScreenReflectionPainter extends CustomPainter {
       center: const Alignment(-0.8, -0.8),
       radius: 0.3,
       colors: [
-        Colors.white.withOpacity(0.08 * intensity),
+        Colors.white.withValues(alpha: 0.08 * intensity),
         Colors.transparent,
       ],
     );

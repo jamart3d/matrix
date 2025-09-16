@@ -1,5 +1,3 @@
-// lib/pages/music_player_page.dart
-
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -23,7 +21,7 @@ class MusicPlayerPage extends StatefulWidget {
 }
 
 class _MusicPlayerPageState extends State<MusicPlayerPage>
-    with SingleTickerProviderStateMixin { // Reverted to SingleTickerProviderStateMixin
+    with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
   late final Animation<double> _opacityAnimation;
   final Logger _logger = Logger();
@@ -82,6 +80,7 @@ class _MusicPlayerPageState extends State<MusicPlayerPage>
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    // This method is unchanged
     return AppBar(
       centerTitle: true,
       forceMaterialTransparency: true,
@@ -145,9 +144,9 @@ class _MusicPlayerPageState extends State<MusicPlayerPage>
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.7),
-                  Colors.black.withOpacity(0.4),
-                  Colors.black.withOpacity(0.8),
+                  Colors.black.withValues(alpha:0.7),
+                  Colors.black.withValues(alpha:0.4),
+                  Colors.black.withValues(alpha:0.8),
                 ],
               ),
             ),
@@ -158,17 +157,21 @@ class _MusicPlayerPageState extends State<MusicPlayerPage>
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
                   children: [
-                    const Spacer(flex: 1),
+                    // --- CORRECTED LAYOUT ---
+                    // A small, fixed gap at the top to prevent the art from touching the status bar.
+                    const Gap(16),
+                    // Layer 1: The Album Art, now anchored near the top as intended.
                     AlbumArtView(
                       albumArt: albumArt,
                       heroTag: 'album_art_$albumArt',
                     ),
-                    const Spacer(flex: 1),
-                    SizedBox(
-                      height: 120,
+                    const Gap(16), // A small, fixed gap.
+                    // Layer 2: The SongScrollWheel, expanded to fill the available space.
+                    Expanded(
                       child: SongScrollWheel(trackPlayerProvider: trackPlayerProvider),
                     ),
-                    const Spacer(flex: 1),
+                    const Gap(16), // A small, fixed gap.
+                    // Layer 3: The playback controls, anchored at the bottom.
                     if (trackPlayerProvider.isLoadingTimeout)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -185,6 +188,7 @@ class _MusicPlayerPageState extends State<MusicPlayerPage>
                     if (settingsProvider.showBufferInfo)
                       BufferInfoPanel(provider: trackPlayerProvider),
                     const Gap(20),
+                    // --- END OF CORRECTION ---
                   ],
                 ),
               ),
@@ -196,6 +200,7 @@ class _MusicPlayerPageState extends State<MusicPlayerPage>
   }
 
   Widget _buildEmptyState() {
+    // This method is unchanged
     return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

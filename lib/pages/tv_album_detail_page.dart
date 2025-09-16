@@ -113,7 +113,7 @@
 //       ),
 //       child: BackdropFilter(
 //         filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-//         child: Container(color: Colors.black.withOpacity(0.5)),
+//         child: Container(color: Colors.black.withValues(alpha: 0.5)),
 //       ),
 //     );
 //   }
@@ -175,7 +175,7 @@
 //               child: Container(
 //                 padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
 //                 decoration: BoxDecoration(
-//                   color: isFocused ? Colors.white.withOpacity(0.3) : Colors.transparent,
+//                   color: isFocused ? Colors.white.withValues(alpha: 0.3) : Colors.transparent,
 //                   borderRadius: BorderRadius.circular(8),
 //                 ),
 //                 child: Row(
@@ -203,7 +203,7 @@
 //                     Text(
 //                       formatDurationSeconds(track.trackDuration),
 //                       style: TextStyle(
-//                         color: isCurrentlyPlaying ? Colors.yellow.withOpacity(0.8) : Colors.white70,
+//                         color: isCurrentlyPlaying ? Colors.yellow.withValues(alpha: 0.8) : Colors.white70,
 //                         fontSize: 24,
 //                       ),
 //                     ),

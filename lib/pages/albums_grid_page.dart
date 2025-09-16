@@ -126,7 +126,7 @@
 //           child: BackdropFilter(
 //             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
 //             child: Container(
-//               color: Colors.black.withOpacity(0.5),
+//               color: Colors.black.withValues(alpha: 0.5),
 //               child: FutureBuilder<void>(
 //                 future: _initializationFuture,
 //                 builder: (context, snapshot) {
@@ -159,7 +159,7 @@
 //   PreferredSizeWidget? _buildAppBar() {
 //     return _isAppBarFocused ? AppBar(
 //       foregroundColor: Colors.white,
-//       backgroundColor: Colors.black.withOpacity(0.7),
+//       backgroundColor: Colors.black.withValues(alpha: 0.7),
 //       centerTitle: true,
 //       title: Row(mainAxisSize: MainAxisSize.min, children: [
 //         Text(_currentAlbumName ?? 'Select an Album', style: const TextStyle(color: Colors.white)),

@@ -82,7 +82,7 @@ class ThemedShowsProgressBar extends StatelessWidget {
                   backgroundColor: Colors.grey[800],
                   // --- THEME CHANGE HERE ---
                   // Changed the buffer color to a dim yellow to match the theme.
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow.withOpacity(0.3)),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow.withValues(alpha: 0.3)),
                 ),
               ),
 
@@ -97,7 +97,7 @@ class ThemedShowsProgressBar extends StatelessWidget {
                   activeTrackColor: Colors.yellow,
                   inactiveTrackColor: Colors.transparent, // Keep this transparent to show the buffer bar
                   thumbColor: Colors.yellow,
-                  overlayColor: Colors.redAccent.withOpacity(0.2), // The glow when you press the thumb
+                  overlayColor: Colors.redAccent.withValues(alpha: 0.2), // The glow when you press the thumb
                   trackHeight: 4.0,
                   overlayShape: const RoundSliderOverlayShape(overlayRadius: 10.0),
                   thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),

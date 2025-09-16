@@ -41,11 +41,11 @@ class ShowsPlayerTrackTile extends StatelessWidget {
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
         color: isCurrentlyPlaying
-            ? Colors.white.withOpacity(0.1)
+            ? Colors.white.withValues(alpha:0.1)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8.0),
         border: isCurrentlyPlaying
-            ? Border.all(color: themeColor.withOpacity(0.3), width: 1)
+            ? Border.all(color: themeColor.withValues(alpha: 0.3), width: 1)
             : null,
       ),
       margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0.5),
@@ -78,7 +78,7 @@ class ShowsPlayerTrackTile extends StatelessWidget {
       child: Text(
         track.trackNumber,
         style: TextStyle(
-          color: isCurrentlyPlaying ? themeColor.withOpacity(0.8) : Colors.white70,
+          color: isCurrentlyPlaying ? themeColor.withValues(alpha: 0.8) : Colors.white70,
           fontSize: 24.0,
           shadows: isCurrentlyPlaying ? glowShadows : null,
         ),
@@ -141,7 +141,7 @@ class ShowsPlayerTrackTile extends StatelessWidget {
       return Text(
         formatDurationSeconds(track.trackDuration),
         style: TextStyle(
-          color: isCurrentlyPlaying ? themeColor.withOpacity(0.8) : Colors.white70,
+          color: isCurrentlyPlaying ? themeColor.withValues(alpha: 0.8) : Colors.white70,
           shadows: isCurrentlyPlaying ? glowShadows : null,
           fontSize: 24.0,
         ),

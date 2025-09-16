@@ -65,12 +65,12 @@ class _AnimatedAlbumArtState extends State<AnimatedAlbumArt>
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha:0.5),
               blurRadius: 20,
               spreadRadius: 5,
             ),
             BoxShadow(
-              color: Colors.green.withOpacity(0.4), // This color can be themed if needed
+              color: Colors.green.withValues(alpha:0.4), // This color can be themed if needed
               blurRadius: 30,
               spreadRadius: -10,
             ),

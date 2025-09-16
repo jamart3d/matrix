@@ -144,7 +144,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 child: _buildAlbumWheel(albums, highlightedAlbumName),
               ),
             ),
@@ -292,7 +292,7 @@ class _AlbumListWheelPageState extends State<AlbumListWheelPage> with WidgetsBin
                       Text(
                         extractDateFromAlbumName(album.name),
                         style: TextStyle(
-                          color: isSelected ? Colors.yellow.withOpacity(0.8) : Colors.white70,
+                          color: isSelected ? Colors.yellow.withValues(alpha: 0.8) : Colors.white70,
                           fontSize: 12,
                           shadows: const [Shadow(color: Colors.black, blurRadius: 2)],
                         ),

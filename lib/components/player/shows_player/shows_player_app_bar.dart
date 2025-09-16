@@ -1,3 +1,4 @@
+import 'dart:ui'; // Import this for ImageFilter
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:marquee/marquee.dart';
@@ -22,10 +23,12 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverAppBar(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.transparent, // Important for blur to be visible
+      // --- FIX APPLIED HERE ---
       pinned: true,
-      floating: true,
-      snap: true,
+      floating: false,
+      snap: false,
+      // --- END OF FIX ---
       expandedHeight: 120.0,
       actions: [
         IconButton(
@@ -34,15 +37,23 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
           onPressed: onClearPlaylist,
         ),
       ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Align(
-          alignment: Alignment.bottomLeft,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 56, bottom: 16, right: 16),
-            child: _buildAlbumInfo(context),
+      // --- BLUR EFFECT ADDED HERE ---
+      flexibleSpace: ClipRect( // Prevents the blur from bleeding outside the app bar
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+          child: FlexibleSpaceBar(
+            // The background now sits inside the BackdropFilter
+            background: Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 56, bottom: 16, right: 16),
+                child: _buildAlbumInfo(context),
+              ),
+            ),
           ),
         ),
       ),
+      // --- END OF BLUR EFFECT ---
     );
   }
 

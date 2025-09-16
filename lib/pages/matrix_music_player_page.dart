@@ -1,5 +1,3 @@
-// lib/pages/matrix_music_player_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
@@ -179,6 +177,22 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
       Shadow(color: themeAccentColor, blurRadius: 6),
     ];
 
+    // --- MODIFICATION: Title Parsing Logic ---
+    final String albumTitle = trackPlayerProvider.currentAlbumTitle;
+    String fullTitleText = albumTitle; // Default to the original title
+
+    final dateRegex = RegExp(r'(\d{4}-\d{2}-\d{2})');
+    final match = dateRegex.firstMatch(albumTitle);
+
+    if (match != null) {
+      final matchedDate = match.group(1)!;
+      final String dateText = formatDateHumanReadable(matchedDate);
+      final String venueText = albumTitle.replaceFirst(matchedDate, '').replaceAll(RegExp(r'^\s*-\s*|\s*-\s*$|Grateful Dead\s*-\s*'), '').trim();
+      // Combine into a single string
+      fullTitleText = '$venueText - $dateText';
+    }
+    // --- END MODIFICATION ---
+
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
@@ -188,20 +202,33 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
         foregroundColor: Colors.white,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: settingsProvider.marqueePlayerTitle
-            ? SizedBox(
-          height: 30,
-          child: Marquee(
-            text: trackPlayerProvider.currentAlbumTitle,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-            velocity: 40.0,
-            blankSpace: 30.0,
-          ),
-        )
-            : FadeTransition(
-          opacity: _fadeAnimation,
-          child: Text(trackPlayerProvider.currentAlbumTitle),
+        // --- MODIFICATION: AppBar Title Widget ---
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            const style = TextStyle(fontWeight: FontWeight.bold, fontSize: 18);
+            final textPainter = TextPainter(
+              text: TextSpan(text: fullTitleText, style: style),
+              maxLines: 1,
+              textDirection: TextDirection.ltr,
+            )..layout(minWidth: 0, maxWidth: double.infinity);
+
+            // Only use Marquee if the text actually overflows
+            if (textPainter.width > constraints.maxWidth) {
+              return SizedBox(
+                height: 24,
+                child: Marquee(
+                  text: fullTitleText,
+                  style: style,
+                  velocity: 40.0,
+                  blankSpace: 30.0,
+                ),
+              );
+            } else {
+              return Text(fullTitleText, style: style);
+            }
+          },
         ),
+        // --- END MODIFICATION ---
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep),
@@ -249,8 +276,8 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
                     provider: trackPlayerProvider,
                     activeColor: themeColor,
                     shadowColor: themeAccentColor,
-                    bufferColor: themeColor.withOpacity(0.3),
-                    overlayColor: themeAccentColor.withOpacity(0.2),
+                    bufferColor: themeColor.withValues(alpha:0.3),
+                    overlayColor: themeAccentColor.withValues(alpha:0.2),
                   ),
                   const Gap(16),
                   if (settingsProvider.showBufferInfo)
@@ -266,6 +293,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
   }
 
   Widget _buildTrackList(BuildContext context, TrackPlayerProvider provider, Color themeColor, List<Shadow> glowShadows) {
+    // ... This method is unchanged
     final playlist = provider.playlist;
     final currentIndex = provider.currentIndex;
 
@@ -315,6 +343,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
   }
 
   Widget _buildTrackTile(dynamic track, int index, bool isCurrentlyPlaying, Color themeColor, TrackPlayerProvider provider, List<Shadow> glowShadows) {
+    // ... This method is unchanged
     final settingsProvider = context.watch<AlbumSettingsProvider>();
     final isThisTrackInTimeout = isCurrentlyPlaying && provider.isLoadingTimeout;
 
@@ -328,11 +357,11 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
         color: isCurrentlyPlaying
-            ? Colors.white.withOpacity(0.1)
+            ? Colors.white.withValues(alpha:0.1)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8.0),
         border: isCurrentlyPlaying
-            ? Border.all(color: themeColor.withOpacity(0.3), width: 1)
+            ? Border.all(color: themeColor.withValues(alpha:0.3), width: 1)
             : null,
       ),
       margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.0),
@@ -386,7 +415,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
           padding: EdgeInsets.all(isCurrentlyPlaying ? 8.0 : 4.0),
           decoration: BoxDecoration(
             color: isCurrentlyPlaying
-                ? themeColor.withOpacity(0.2)
+                ? themeColor.withValues(alpha:0.2)
                 : Colors.transparent,
             shape: BoxShape.circle,
           ),
@@ -394,7 +423,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
             track.trackNumber,
             style: TextStyle(
               color: isCurrentlyPlaying
-                  ? themeColor.withOpacity(0.8)
+                  ? themeColor.withValues(alpha:0.8)
                   : Colors.white70,
               fontWeight: isCurrentlyPlaying ? FontWeight.bold : FontWeight.normal,
               shadows: isCurrentlyPlaying ? glowShadows : null,
@@ -408,7 +437,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
           formatDurationSeconds(track.trackDuration),
           style: TextStyle(
             color: isCurrentlyPlaying
-                ? themeColor.withOpacity(0.8)
+                ? themeColor.withValues(alpha:0.8)
                 : Colors.white70,
             shadows: isCurrentlyPlaying ? glowShadows : null,
           ),
@@ -424,6 +453,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
   }
 
   Widget _buildPlayerControls(TrackPlayerProvider provider, Color themeColor) {
+    // ... This method is unchanged
     return AnimatedBuilder(
       animation: _slideAnimation,
       builder: (context, child) {
@@ -452,6 +482,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
   }
 
   Widget _buildPlayPauseButton(TrackPlayerProvider provider, Color themeColor) {
+    // ... This method is unchanged
     const heroTag = 'play_pause_button_hero_matrix';
 
     Widget buttonContent;
@@ -503,6 +534,7 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
   }
 
   void _showClearPlaylistDialog(BuildContext context, TrackPlayerProvider provider) {
+    // ... This method is unchanged
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {

@@ -30,7 +30,7 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
   String _currentAlbumArt = 'assets/images/t_steal.webp';
   String? _currentAlbumName;
   bool _isPageOffline = false;
-  Color _backdropColor = Colors.black.withOpacity(0.5);
+  Color _backdropColor = Colors.black.withValues(alpha: 0.5);
   bool _connectionChecked = false;
 
   final ItemScrollController _itemScrollController = ItemScrollController();
@@ -174,7 +174,7 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
   }
 
   Widget _buildBodyContent(List<Album> albums) {
-    final Color effectiveBackdropColor = _currentAlbumName == null ? Colors.black.withOpacity(0.7) : _backdropColor;
+    final Color effectiveBackdropColor = _currentAlbumName == null ? Colors.black.withValues(alpha: 0.7) : _backdropColor;
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
@@ -308,7 +308,7 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
             const SizedBox(height: 4),
             Text(
               extractDateFromAlbumName(album.name),
-              style: TextStyle(fontSize: 12, color: isCurrentAlbum ? Colors.yellow.withOpacity(0.8) : Colors.white70),
+              style: TextStyle(fontSize: 12, color: isCurrentAlbum ? Colors.yellow.withValues(alpha: 0.8) : Colors.white70),
             ),
           ],
         ),
@@ -339,7 +339,7 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Connection Issue', style: TextStyle(color: Colors.red)),
-          backgroundColor: Colors.black.withOpacity(0.8),
+          backgroundColor: Colors.black.withValues(alpha: 0.8),
           content: Text(message, style: const TextStyle(color: Colors.white70)),
           actions: [
             TextButton(
@@ -363,7 +363,7 @@ class _AlbumsPageState extends State<AlbumsPage> with AutomaticKeepAliveClientMi
       return;
     }
     final offlineAlbum = albums[offlineAlbumIndex];
-    setState(() => _backdropColor = Colors.red.withOpacity(0.5));
+    setState(() => _backdropColor = Colors.red.withValues(alpha: 0.5));
     context.read<AlbumSettingsProvider>().setDisplayAlbumReleaseNumber(true);
     await playAlbumFromTracks(offlineAlbum.tracks);
   }

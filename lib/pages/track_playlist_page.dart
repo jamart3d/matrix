@@ -61,7 +61,7 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
               child: Container(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -97,7 +97,7 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
                 ? Text(
               track.trackNumber,
               style: TextStyle(
-                color: isCurrentlyPlayingTrack ? Colors.yellow.withOpacity(0.9) : Colors.white70,
+                color: isCurrentlyPlayingTrack ? Colors.yellow.withValues(alpha: 0.9) : Colors.white70,
                 fontSize: 14,
                 fontStyle: FontStyle.italic,
               ),
@@ -115,7 +115,7 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
             trailing: Text(
               formatDurationSeconds(track.trackDuration),
               style: TextStyle(
-                color: isCurrentlyPlayingTrack ? Colors.yellow.withOpacity(0.8) : Colors.white70,
+                color: isCurrentlyPlayingTrack ? Colors.yellow.withValues(alpha: 0.8) : Colors.white70,
               ),
             ),
             onTap: () {
@@ -124,7 +124,7 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
               }
             },
             selected: isCurrentlyPlayingTrack,
-            selectedTileColor: Colors.yellow.withOpacity(0.1),
+            selectedTileColor: Colors.yellow.withValues(alpha: 0.1),
           );
         },
       ),

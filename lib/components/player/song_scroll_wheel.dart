@@ -1,5 +1,3 @@
-// lib/components/player/song_scroll_wheel.dart
-
 import 'package:flutter/material.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
@@ -17,96 +15,52 @@ class SongScrollWheel extends StatefulWidget {
 }
 
 class _SongScrollWheelState extends State<SongScrollWheel> {
+  // --- SIMPLIFIED STATE ---
+  // The ItemPositionsListener and related state are no longer needed.
   late ItemScrollController _itemScrollController;
-  late ItemPositionsListener _itemPositionsListener;
-  int _currentVisibleIndex = 0;
-  String? _lastKnownTrackName;
+  int _lastKnownIndex = -1;
 
   static const int _maxTitleLength = 25;
-  static const Duration _scrollDelay = Duration(milliseconds: 100);
+  static const Duration _scrollAnimationDuration = Duration(milliseconds: 300);
 
   @override
   void initState() {
     super.initState();
     _itemScrollController = ItemScrollController();
-    _itemPositionsListener = ItemPositionsListener.create();
-    _lastKnownTrackName = widget.trackPlayerProvider.currentTrack?.trackName;
-
-    _itemPositionsListener.itemPositions.addListener(() {
-      final positions = _itemPositionsListener.itemPositions.value;
-      if (positions.isNotEmpty) {
-        final centerPosition = positions.reduce((a, b) {
-          final aDistance = (a.itemTrailingEdge + a.itemLeadingEdge) / 2 - 0.5;
-          final bDistance = (b.itemTrailingEdge + b.itemLeadingEdge) / 2 - 0.5;
-          return aDistance.abs() < bDistance.abs() ? a : b;
-        });
-
-        if (_currentVisibleIndex != centerPosition.index) {
-          setState(() {
-            _currentVisibleIndex = centerPosition.index;
-          });
-        }
-      }
-    });
+    _lastKnownIndex = widget.trackPlayerProvider.currentIndex;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(_scrollDelay, () {
-        if (mounted) {
-          _scrollToCurrentTrack();
-        }
-      });
+      if (mounted) {
+        // Use jumpTo for the initial scroll to avoid animations on page load.
+        _scrollToCurrentTrack(isInitial: true);
+      }
     });
   }
 
-  void _scrollToCurrentTrack() {
-    final playlist = widget.trackPlayerProvider.playlist;
-    final currentTrack = widget.trackPlayerProvider.currentTrack;
-
-    if (currentTrack == null || playlist.isEmpty) return;
-
-    int index = -1;
-    for (int i = 0; i < playlist.length; i++) {
-      if (playlist[i].trackName == currentTrack.trackName) {
-        index = i;
-        break;
-      }
-    }
+  // This method is now much simpler.
+  void _scrollToCurrentTrack({bool isInitial = false}) {
+    final index = widget.trackPlayerProvider.currentIndex;
 
     if (index != -1 && _itemScrollController.isAttached) {
-      try {
+      if (isInitial) {
         _itemScrollController.jumpTo(index: index);
-        setState(() {
-          _currentVisibleIndex = index;
-        });
-      } catch (e) {
-        // Silent fallback
+      } else {
+        _itemScrollController.scrollTo(
+          index: index,
+          duration: _scrollAnimationDuration,
+          curve: Curves.easeInOutCubic,
+        );
       }
     }
-  }
-
-  bool _isTrackMatch(String displayTitle, String currentTrack, bool hideNumbers) {
-    final formatted = formatTrackTitle(currentTrack, hideNumber: hideNumbers);
-    final normalizedDisplay = displayTitle.toLowerCase().trim().replaceAll('...', '');
-    final normalizedCurrent = formatted.toLowerCase().trim();
-
-    return normalizedDisplay == normalizedCurrent ||
-        normalizedCurrent.startsWith(normalizedDisplay);
   }
 
   @override
   void didUpdateWidget(SongScrollWheel oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    final currentTrackName = widget.trackPlayerProvider.currentTrack?.trackName;
-
-    if (currentTrackName != _lastKnownTrackName) {
-      _lastKnownTrackName = currentTrackName;
-
-      if (currentTrackName != null) {
-        Future.delayed(_scrollDelay, () {
-          if (mounted) _scrollToCurrentTrack();
-        });
-      }
+    final currentIndex = widget.trackPlayerProvider.currentIndex;
+    if (currentIndex != _lastKnownIndex) {
+      _lastKnownIndex = currentIndex;
+      _scrollToCurrentTrack();
     }
   }
 
@@ -129,59 +83,41 @@ class _SongScrollWheelState extends State<SongScrollWheel> {
       );
     }
 
-    final settingsProvider = context.watch<AlbumSettingsProvider>();
-    final currentRawTrackName = widget.trackPlayerProvider.currentTrack?.trackName ?? '';
+    final currentIndex = widget.trackPlayerProvider.currentIndex;
 
     return SizedBox(
       height: 120,
       child: ScrollablePositionedList.builder(
         itemScrollController: _itemScrollController,
-        itemPositionsListener: _itemPositionsListener,
+        // The ItemPositionsListener is no longer needed here.
         scrollDirection: Axis.vertical,
         itemCount: allSongs.length,
         itemBuilder: (context, index) {
-          final songTitle = allSongs[index];
-          final isCurrentTrack = _isTrackMatch(
-            songTitle,
-            currentRawTrackName,
-            settingsProvider.hideLeadingTrackNumberInTitle,
-          );
-          final isCenterItem = index == _currentVisibleIndex;
+          final isCurrentTrack = (index == currentIndex);
 
           return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: EdgeInsets.symmetric(
-              vertical: 4,
-              horizontal: isCenterItem ? 8 : 20,
-            ),
+            duration: const Duration(milliseconds: 300),
+            // The margin is now constant, not dependent on the center position.
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
+              // The color only depends on whether it's the current track.
               color: isCurrentTrack
-                  ? Colors.yellow.withOpacity(0.3)
-                  : isCenterItem
-                  ? Colors.white.withOpacity(0.1)
+                  ? Colors.yellow.withValues(alpha:0.3)
                   : Colors.transparent,
             ),
             child: Center(
               child: Text(
-                songTitle,
+                allSongs[index],
                 style: TextStyle(
+                  // The text color only depends on whether it's the current track.
                   color: isCurrentTrack
                       ? Colors.yellow
-                      : isCenterItem
-                      ? Colors.white
-                      : Colors.white.withOpacity(0.5),
-                  fontSize: isCurrentTrack
-                      ? 18
-                      : isCenterItem
-                      ? 16
-                      : 14,
-                  fontWeight: isCurrentTrack
-                      ? FontWeight.bold
-                      : isCenterItem
-                      ? FontWeight.w500
-                      : FontWeight.w400,
+                      : Colors.white.withValues(alpha:0.7), // Non-current tracks are slightly dimmed.
+                  // There are now only two states: current or not current.
+                  fontSize: isCurrentTrack ? 18 : 16,
+                  fontWeight: isCurrentTrack ? FontWeight.bold : FontWeight.w400,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

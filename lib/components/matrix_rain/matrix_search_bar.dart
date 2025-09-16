@@ -28,9 +28,9 @@ class MatrixSearchBar extends StatelessWidget {
           child: Container(
             margin: const EdgeInsets.only(top: 16),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
+              color: Colors.black.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: Colors.green.withOpacity(0.5)),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
             ),
             child: TextField(
               controller: controller,
@@ -39,7 +39,7 @@ class MatrixSearchBar extends StatelessWidget {
               decoration: InputDecoration(
                 // --- UPDATED: Hint text is more helpful ---
                 hintText: 'Search venues or year (e.g., 77)...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
                 prefixIcon: const Icon(Icons.search, color: Colors.green),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),

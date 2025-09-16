@@ -64,7 +64,7 @@ class TrackDetailPage extends StatelessWidget {
           filter: ImageFilter.blur(
               sigmaX: 10.0, sigmaY: 10.0), // Adjust blur intensity as needed
           child: Container(
-            color: Colors.black.withOpacity(
+            color: Colors.black.withValues(alpha:
                 0.5),
             child: Padding(
               padding: const EdgeInsets.all(4.0),

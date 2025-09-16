@@ -24,7 +24,7 @@ class MyDrawer extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
           child: Container(
             // --- MODIFICATION 3: Use a semi-transparent color for the glass tint ---
-            color: Colors.grey[900]!.withOpacity(0.7),
+            color: Colors.grey[900]!.withValues(alpha:0.7),
             child: Column(
               children: [
                 DrawerHeader(
@@ -37,7 +37,7 @@ class MyDrawer extends StatelessWidget {
                         'assets/images/t_steal.webp',
                         fit: BoxFit.cover,
                       ),
-                      Container(color: Colors.black.withOpacity(0.5)),
+                      Container(color: Colors.black.withValues(alpha:0.5)),
                       const Center(
                         child: Text(
                           'matrix',

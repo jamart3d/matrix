@@ -32,7 +32,7 @@ if (keyPropertiesFile.exists()) {
 
 android {
     namespace = "com.jamart3d.matrix"
-    compileSdk = 34
+    compileSdk = 35
     ndkVersion = "25.1.8937393"
 
     compileOptions {
@@ -70,8 +70,8 @@ android {
 
     defaultConfig {
         applicationId = "com.jamart3d.matrix"
-        minSdk = 21
-        targetSdk = 34
+        minSdkVersion = flutter.minSdkVersion
+        targetSdk = 35
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
     }

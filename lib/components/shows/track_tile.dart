@@ -37,7 +37,7 @@ class TrackTile extends StatelessWidget {
     final double? detailFontSize = isLargeFont ? 15.0 : null;
 
     return Container(
-      color: isCurrentlyPlaying ? Colors.yellow.withOpacity(0.15) : Colors.transparent,
+      color: isCurrentlyPlaying ? Colors.yellow.withValues(alpha:0.15) : Colors.transparent,
       child: ListTile(
         contentPadding: EdgeInsets.only(
             left: settingsProvider.showTrackNumbersInLists ? 48.0 : 16.0,
@@ -61,7 +61,7 @@ class TrackTile extends StatelessWidget {
         trailing: Text(
           formatDurationSeconds(track.trackDuration),
           style: TextStyle(
-            color: isCurrentlyPlaying ? Colors.yellow.withOpacity(0.8) : Colors.grey.shade400,
+            color: isCurrentlyPlaying ? Colors.yellow.withValues(alpha:0.8) : Colors.grey.shade400,
             fontSize: detailFontSize,
           ),
         ),

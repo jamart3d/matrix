@@ -250,7 +250,7 @@ class SettingsPage extends StatelessWidget {
                     value: settings.showTrackNumbersInLists,
                     onChanged: settings.setShowTrackNumbersInLists,
                     secondary: const Icon(Icons.format_list_numbered, color: iconColor),
-                    activeColor: Colors.yellow,
+                    activeThumbColor: Colors.yellow,
                   ),
                   // --- NEW WIDGET ADDED ---
                   ListTile(
@@ -284,7 +284,7 @@ class SettingsPage extends StatelessWidget {
                     value: settings.marqueePlayerTitle,
                     onChanged: settings.setMarqueePlayerTitle,
                     secondary: const Icon(Icons.text_fields, color: iconColor),
-                    activeColor: Colors.yellow,
+                    activeThumbColor: Colors.yellow,
                   ),
                   SwitchListTile(
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
@@ -293,7 +293,7 @@ class SettingsPage extends StatelessWidget {
                     value: settings.hideLeadingTrackNumberInTitle,
                     onChanged: settings.setHideLeadingTrackNumberInTitle,
                     secondary: const Icon(Icons.title, color: iconColor),
-                    activeColor: Colors.yellow,
+                    activeThumbColor: Colors.yellow,
                   ),
                   SwitchListTile(
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
@@ -302,7 +302,7 @@ class SettingsPage extends StatelessWidget {
                     value: settings.showBufferInfo,
                     onChanged: settings.setShowBufferInfo,
                     secondary: const Icon(Icons.science, color: iconColor),
-                    activeColor: Colors.yellow,
+                    activeThumbColor: Colors.yellow,
                   ),
                   ListTile(
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
@@ -335,7 +335,7 @@ class SettingsPage extends StatelessWidget {
                     value: settings.displayAlbumReleaseNumber,
                     onChanged: settings.setDisplayAlbumReleaseNumber,
                     secondary: const Icon(Icons.format_list_numbered, color: iconColor),
-                    activeColor: Colors.yellow,
+                    activeThumbColor: Colors.yellow,
                   ),
                 ],
               ),
@@ -368,7 +368,7 @@ class SettingsPage extends StatelessWidget {
                     value: settings.matrixHalfSpeed,
                     onChanged: settings.setMatrixHalfSpeed,
                     secondary: const Icon(Icons.slow_motion_video, color: iconColor),
-                    activeColor: Colors.yellow,
+                    activeThumbColor: Colors.yellow,
                   ),
                   ListTile(
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
@@ -405,7 +405,7 @@ class SettingsPage extends StatelessWidget {
                     value: settings.matrixAllowOverlap,
                     onChanged: settings.setMatrixAllowOverlap,
                     secondary: const Icon(Icons.layers, color: iconColor),
-                    activeColor: Colors.yellow,
+                    activeThumbColor: Colors.yellow,
                   ),
                   ListTile(
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
@@ -456,7 +456,7 @@ class SettingsPage extends StatelessWidget {
                     value: settings.matrixRippleEffects,
                     onChanged: settings.setMatrixRippleEffects,
                     secondary: const Icon(Icons.radio_button_unchecked, color: iconColor),
-                    activeColor: Colors.yellow,
+                    activeThumbColor: Colors.yellow,
                   ),
                   ListTile(
                     contentPadding: const EdgeInsets.only(left: 32, right: 16),
@@ -585,7 +585,7 @@ class SettingsPage extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: _getThemePreviewColor(settings.matrixColorTheme),
                             shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: _getThemePreviewColor(settings.matrixColorTheme).withOpacity(0.5), blurRadius: 4, spreadRadius: 1)],
+                            boxShadow: [BoxShadow(color: _getThemePreviewColor(settings.matrixColorTheme).withValues(alpha: 0.5), blurRadius: 4, spreadRadius: 1)],
                           ),
                         ),
                         PopupMenuButton<MatrixColorTheme>(

@@ -238,7 +238,7 @@ class YearScrollbarPainter extends CustomPainter {
 
     // Draw track
     final trackPaint = Paint()
-      ..color = Colors.white.withOpacity(isDragging ? 0.2 : 0.1)
+      ..color = Colors.white.withValues(alpha: isDragging ? 0.2 : 0.1)
       ..strokeWidth = 6;
     canvas.drawLine(
         Offset(size.width - 20, trackTop),
@@ -259,13 +259,13 @@ class YearScrollbarPainter extends CustomPainter {
     final thumbPaint = Paint()
       ..color = isDragging
           ? Colors.yellow
-          : Colors.yellow.withOpacity(0.9);
+          : Colors.yellow.withValues(alpha: 0.9);
     canvas.drawRRect(thumbRect, thumbPaint);
 
     // Add a subtle shadow when dragging
     if (isDragging) {
       final shadowPaint = Paint()
-        ..color = Colors.black.withOpacity(0.3)
+        ..color = Colors.black.withValues(alpha: 0.3)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
       canvas.drawRRect(thumbRect.shift(const Offset(2, 2)), shadowPaint);
     }

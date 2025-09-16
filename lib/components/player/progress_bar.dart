@@ -77,7 +77,7 @@ class ProgressBar extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: (bufferedPosition.inSeconds / duration.inSeconds).clamp(0.0, 1.0),
                   backgroundColor: Colors.grey[800],
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!.withOpacity(0.6)),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!.withValues(alpha: 0.6)),
                 ),
               ),
 

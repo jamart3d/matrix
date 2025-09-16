@@ -101,7 +101,7 @@ class _AnimatedPlayingFabState extends State<AnimatedPlayingFab>
   Widget _buildButtonContent() {
     final List<Shadow> shadows = [
       Shadow(
-        color: widget.shadowColor ?? widget.themeColor.withOpacity(0.7),
+        color: widget.shadowColor ?? widget.themeColor.withValues(alpha: 0.7),
         blurRadius: 4,
       )
     ];

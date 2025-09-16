@@ -1,18 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// A singleton service for handling navigation-related tasks.
-///
-/// This service allows for context-less navigation, meaning you can navigate
-/// from your business logic (like a Provider or BLoC) without needing to pass
-/// the BuildContext around.
-///
-/// How to use:
-/// 1. Assign the navigatorKey to your MaterialApp:
-///    MaterialApp(navigatorKey: NavigationService().navigatorKey, ...)
-///
-/// 2. Call navigation methods from anywhere in your app:
-///    NavigationService().navigateTo('/details');
-///
 class NavigationService {
   // --- Singleton Pattern Setup ---
 

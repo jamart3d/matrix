@@ -71,7 +71,7 @@ class MatrixRainPainter extends CustomPainter {
       case MatrixGlowIntensity.half: return 0.5;
       case MatrixGlowIntensity.double: return 2.0;
       case MatrixGlowIntensity.normal:
-      default: return 1.0;
+      return 1.0;
     }
   }
 
@@ -80,7 +80,7 @@ class MatrixRainPainter extends CustomPainter {
       case MatrixFontSize.small: return 12.0;
       case MatrixFontSize.large: return 20.0;
       case MatrixFontSize.medium:
-      default: return 16.0;
+      return 16.0;
     }
   }
 
@@ -125,15 +125,15 @@ class MatrixRainPainter extends CustomPainter {
       fontSize = baseFontSize * 1.1;
       final glow = column.glowIntensity * feedbackIntensity;
       shadows = [
-        Shadow(color: Colors.yellow.withOpacity(0.9 * glow), blurRadius: 25 * glow * intensityMultiplier),
-        Shadow(color: Colors.orange.withOpacity(0.7 * glow), blurRadius: 40 * glow * intensityMultiplier)
+        Shadow(color: Colors.yellow.withValues(alpha:0.9 * glow), blurRadius: 25 * glow * intensityMultiplier),
+        Shadow(color: Colors.orange.withValues(alpha:0.7 * glow), blurRadius: 40 * glow * intensityMultiplier)
       ];
     } else {
       charColor = _leadingColorMap[leadingColor]!;
       fontSize = baseFontSize;
       shadows = [
-        Shadow(color: charColor.withOpacity(0.9), blurRadius: 12 * intensityMultiplier),
-        Shadow(color: charColor.withOpacity(0.5), blurRadius: 20 * intensityMultiplier)
+        Shadow(color: charColor.withValues(alpha:0.9), blurRadius: 12 * intensityMultiplier),
+        Shadow(color: charColor.withValues(alpha:0.5), blurRadius: 20 * intensityMultiplier)
       ];
     }
 
@@ -183,12 +183,12 @@ class MatrixRainPainter extends CustomPainter {
     if (!isFiller) {
       if (column.isCurrentlyPlaying) {
         final glow = column.glowIntensity * feedbackIntensity;
-        shadows = [Shadow(color: charColor.withOpacity(0.6 * glow), blurRadius: 10 * glow * intensityMultiplier)];
+        shadows = [Shadow(color: charColor.withValues(alpha:0.6 * glow), blurRadius: 10 * glow * intensityMultiplier)];
       }
       else {
         shadows = [
-          Shadow(color: charColor.withOpacity(0.8), blurRadius: 8 * intensityMultiplier),
-          Shadow(color: charColor.withOpacity(0.4), blurRadius: 16 * intensityMultiplier)
+          Shadow(color: charColor.withValues(alpha:0.8), blurRadius: 8 * intensityMultiplier),
+          Shadow(color: charColor.withValues(alpha:0.4), blurRadius: 16 * intensityMultiplier)
         ];
       }
     }
@@ -212,7 +212,7 @@ class MatrixRainPainter extends CustomPainter {
 
   void _drawRippleEffect(Canvas canvas, MatrixRainColumn column) {
     final baseRippleColor = _palettes[colorTheme]![(_palettes[colorTheme]!.length * 0.7).floor()];
-    final paint = Paint()..color = baseRippleColor.withOpacity(0.3 * column.rippleEffect * feedbackIntensity)..style = PaintingStyle.stroke..strokeWidth = 2.0 * (1.0 - column.rippleEffect + 0.5);
+    final paint = Paint()..color = baseRippleColor.withValues(alpha:0.3 * column.rippleEffect * feedbackIntensity)..style = PaintingStyle.stroke..strokeWidth = 2.0 * (1.0 - column.rippleEffect + 0.5);
     final center = Offset(column.xPosition + 8, column.yPosition + (column.characters.length * 10));
     final radius = 50 * (1 - column.rippleEffect);
     canvas.drawCircle(center, radius, paint);

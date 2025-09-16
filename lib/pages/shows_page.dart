@@ -201,11 +201,11 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.9),
+            color: Colors.green.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -251,7 +251,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   Widget _buildBlurredBackground() {
     return Container(
       decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/t_steal.webp'), fit: BoxFit.cover)),
-      child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), child: Container(color: Colors.black.withOpacity(0.3))),
+      child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), child: Container(color: Colors.black.withValues(alpha: 0.3))),
     );
   }
 }
