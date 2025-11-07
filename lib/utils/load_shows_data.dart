@@ -1,5 +1,3 @@
-
-
 // lib/utils/load_shows_data.dart
 
 import 'dart:convert';
@@ -50,27 +48,50 @@ Future<List<Show>> loadShowsData() async {
       final uniqueId = '$artist-$date-$venue';
 
       final Map<String, List<Track>> sourcesMap = {};
+      bool containsGdTrack = false;
 
+      // Using a labeled loop to break out of nested loops easily.
+      processSources:
       for (final sourceJson in sourcesJson) {
         if (sourceJson is! Map<String, dynamic>) continue;
         final String shnid = sourceJson['id']?.toString() ?? 'unknown_shnid';
         final List<dynamic> tracksJson = sourceJson['tracks'] ?? [];
         final List<Track> sourceTracks = [];
         int trackIndex = 0;
+
         for (final trackJson in tracksJson) {
           if (trackJson is! Map<String, dynamic>) continue;
-          final track = Track.fromJsonCompact(
+
+          final initialTrack = Track.fromJsonCompact(
             trackJson,
             albumName: showName,
             artistName: artist,
             trackIndex: trackIndex++,
             shnid: shnid,
           );
-          sourceTracks.add(track);
+
+          // Requirement 1: Filter out shows with tracks starting with "gd"
+          if (initialTrack.trackName.toLowerCase().startsWith('gd')) {
+            containsGdTrack = true;
+            _logger.w("Found 'gd' track in '$showName'. Filtering out show.");
+            break processSources; // Exit all loops for this specific show.
+          }
+
+          // Requirement 2: Remove leading numbers from track names
+          final regex = RegExp(r'^\d{1,3}[\s.-]*');
+          final formattedTrackName = initialTrack.trackName.replaceFirst(regex, '');
+
+          sourceTracks.add(initialTrack.copyWith(trackName: formattedTrackName));
         }
+
         if (sourceTracks.isNotEmpty) {
           sourcesMap[shnid] = sourceTracks;
         }
+      }
+
+      // If the flag was set, skip adding this show and move to the next one.
+      if (containsGdTrack) {
+        continue;
       }
 
       if (sourcesMap.isNotEmpty) {

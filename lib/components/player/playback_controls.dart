@@ -67,7 +67,7 @@ class _PlaybackControlsState extends State<PlaybackControls>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(35),
-        color: Colors.black.withValues(alpha: 0.3),
+        color: Colors.black.withOpacity(0.3),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -101,7 +101,7 @@ class _PlaybackControlsState extends State<PlaybackControls>
                         shape: BoxShape.circle,
                         boxShadow: provider.isPlaying ? [
                           BoxShadow(
-                            color: Colors.yellow.withValues(alpha: _glowAnimation.value * 0.5),
+                            color: Colors.yellow.withOpacity(_glowAnimation.value * 0.5),
                             blurRadius: 20,
                             spreadRadius: 5,
                           ),
@@ -120,9 +120,7 @@ class _PlaybackControlsState extends State<PlaybackControls>
                             }
                           },
                           onLongPress: () {
-                            if (provider.isLoading) {
-                              provider.clearPlaylist();
-                            }
+                            provider.clearPlaylist();
                           },
                           child: Container(
                             width: fabSize,
@@ -131,8 +129,8 @@ class _PlaybackControlsState extends State<PlaybackControls>
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 colors: [
-                                  Colors.yellow.withValues(alpha: 0.9),
-                                  Colors.yellow.withValues(alpha: 0.7),
+                                  Colors.yellow.withOpacity(0.9),
+                                  Colors.yellow.withOpacity(0.7),
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
@@ -146,7 +144,7 @@ class _PlaybackControlsState extends State<PlaybackControls>
                                 child: CircularProgressIndicator(
                                   strokeWidth: 3.0,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.black.withValues(alpha: 0.8),
+                                    Colors.black.withOpacity(0.8),
                                   ),
                                 ),
                               )

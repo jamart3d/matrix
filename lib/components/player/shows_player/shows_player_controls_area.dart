@@ -37,8 +37,8 @@ class ShowsPlayerControlsArea extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withValues(alpha: 0.0),
-                Colors.black.withValues(alpha: 0.7),
+                Colors.black.withOpacity(0.0),
+                Colors.black.withOpacity(0.7),
               ],
               stops: const [0.0, 0.4],
             ),
@@ -132,6 +132,9 @@ class ShowsPlayerControlsArea extends StatelessWidget {
             if (provider.isLoading) return;
             HapticFeedback.mediumImpact();
             provider.togglePlayPause();
+          },
+          onLongPress: () {
+            provider.clearPlaylist();
           },
           child: SizedBox(
             width: 64.0,

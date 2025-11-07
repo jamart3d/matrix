@@ -2,6 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:matrix/pages/about_page.dart';
 import 'package:matrix/pages/albums_list_wheel_page.dart';
 import 'package:matrix/pages/albums_page.dart';
@@ -29,6 +30,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 150; // 150 MB
   PaintingBinding.instance.imageCache.maximumSize = 1000;
+
+  // Force the app to stay in portrait mode.
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   if (kDebugMode) {
     final logger = Logger();

@@ -22,14 +22,24 @@ class ShowsPage extends StatefulWidget {
   State<ShowsPage> createState() => _ShowsPageState();
 }
 
-class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixin {
+class _ShowsPageState extends State<ShowsPage>
+    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   late final Future<List<Show>> _showsFuture;
   List<Show> _originalShows = [];
   String? _currentShowName;
   bool _showDeepLinkMessage = false;
 
   final ItemScrollController _itemScrollController = ItemScrollController();
-  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
+  final ItemPositionsListener _itemPositionsListener =
+  ItemPositionsListener.create();
+
+  // --- SEARCH STATE ---
+  bool _isSearchVisible = false;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  late AnimationController _searchAnimationController;
+  late Animation<double> _searchAnimation;
 
   @override
   bool get wantKeepAlive => true;
@@ -44,6 +54,43 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
           _originalShows = shows;
         });
         _checkAndScrollOnLoad();
+      }
+    });
+
+    // --- SEARCH INITIALIZATION ---
+    _searchAnimationController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 300));
+    _searchAnimation =
+        CurvedAnimation(parent: _searchAnimationController, curve: Curves.easeInOutCubic);
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _searchAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    if (_searchQuery != _searchController.text) {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    }
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearchVisible = !_isSearchVisible;
+      if (_isSearchVisible) {
+        _searchAnimationController.forward();
+        _searchFocusNode.requestFocus();
+      } else {
+        _searchAnimationController.reverse();
+        _searchController.clear();
+        _searchFocusNode.unfocus();
       }
     });
   }
@@ -91,13 +138,17 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
   }
 
   Future<void> _scrollToCurrentShow() async {
-    if (_currentShowName == null || !_itemScrollController.isAttached || _originalShows.isEmpty) return;
+    if (_currentShowName == null ||
+        !_itemScrollController.isAttached ||
+        _originalShows.isEmpty) return;
 
     final category = ModalRoute.of(context)?.settings.arguments as String?;
     final filteredShows = _getFilteredShows(category);
-    final sortedShows = _getSortedShows(filteredShows, context.read<AlbumSettingsProvider>().showSortOrder);
+    final sortedShows = _getSortedShows(
+        filteredShows, context.read<AlbumSettingsProvider>().showSortOrder);
+    final searchedShows = _getSearchedShows(sortedShows);
 
-    final index = sortedShows.indexWhere((show) => show.name == _currentShowName);
+    final index = searchedShows.indexWhere((show) => show.name == _currentShowName);
 
     if (index != -1) {
       _itemScrollController.scrollTo(
@@ -113,23 +164,45 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     if (category == null) {
       return _originalShows;
     }
-    return _originalShows.where((show) => show.sourceCreator == category).toList();
+    return _originalShows
+        .where((show) => show.sourceCreator == category)
+        .toList();
   }
 
   List<Show> _getSortedShows(List<Show> shows, ShowSortOrder sortOrder) {
     final sorted = List<Show>.from(shows);
-    sorted.sort((a, b) => (sortOrder == ShowSortOrder.dateDescending) ? b.date.compareTo(a.date) : a.date.compareTo(b.date));
+    sorted.sort((a, b) => (sortOrder == ShowSortOrder.dateDescending)
+        ? b.date.compareTo(a.date)
+        : a.date.compareTo(b.date));
     return sorted;
+  }
+
+  List<Show> _getSearchedShows(List<Show> shows) {
+    if (_searchQuery.isEmpty) {
+      return shows;
+    }
+    return shows.where((show) {
+      final venueMatch = show.venue.toLowerCase().contains(_searchQuery);
+      final yearMatch = show.year.contains(_searchQuery);
+      final dateMatch = show.date.contains(_searchQuery);
+      return venueMatch || yearMatch || dateMatch;
+    }).toList();
   }
 
   String _getPageTitle(String? category) {
     switch (category) {
-      case 'seamons': return "Seamons' matrix -> ";
-      case 'tobin': return "random Tobin's -> ";
-      case 'sirmick': return "random SirMick's -> ";
-      case 'dusborne': return "random Dusborne's -> ";
-      case 'misc': return "random misc maxtrix - >";
-      default: return "select a random show - >";
+      case 'seamons':
+        return "Seamons' matrix -> ";
+      case 'tobin':
+        return "random Tobin's -> ";
+      case 'sirmick':
+        return "random SirMick's -> ";
+      case 'dusborne':
+        return "random Dusborne's -> ";
+      case 'misc':
+        return "random misc maxtrix - >";
+      default:
+        return "select a random show - >";
     }
   }
 
@@ -144,6 +217,7 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
 
     final filteredShows = _getFilteredShows(category);
     final sortedShows = _getSortedShows(filteredShows, settingsProvider.showSortOrder);
+    final searchedShows = _getSearchedShows(sortedShows);
 
     return Scaffold(
       appBar: AppBar(
@@ -155,15 +229,21 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
             icon: const Icon(Icons.question_mark),
             tooltip: 'Play Random Show',
             onPressed: () {
-              if (sortedShows.isNotEmpty) {
-                playRandomShow(playerProvider, sortedShows);
+              if (searchedShows.isNotEmpty) {
+                playRandomShow(playerProvider, searchedShows);
               }
             },
+          ),
+          IconButton(
+            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+            tooltip: 'Search Shows',
+            onPressed: _toggleSearch,
           ),
         ],
       ),
       drawer: const MyDrawer(),
-      floatingActionButton: _buildFloatingActionButton(playerProvider, settingsProvider),
+      floatingActionButton:
+      _buildFloatingActionButton(playerProvider, settingsProvider),
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -175,17 +255,61 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                return Center(child: Text('Could not load shows. Error: ${snapshot.error}'));
+                return Center(
+                    child:
+                    Text('Could not load shows. Error: ${snapshot.error}'));
               }
-              return ShowList(
-                shows: sortedShows,
-                itemScrollController: _itemScrollController,
-                itemPositionsListener: _itemPositionsListener,
+              return Column(
+                children: [
+                  _buildSearchBar(),
+                  Expanded(
+                    child: ShowList(
+                      shows: searchedShows,
+                      itemScrollController: _itemScrollController,
+                      itemPositionsListener: _itemPositionsListener,
+                    ),
+                  ),
+                ],
               );
             },
           ),
           if (_showDeepLinkMessage) _buildDeepLinkNotification(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return SizeTransition(
+      sizeFactor: _searchAnimation,
+      axisAlignment: -1.0,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white30),
+        ),
+        child: TextField(
+          controller: _searchController,
+          focusNode: _searchFocusNode,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Search by venue, year, or date...',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+            icon: const Icon(Icons.search, color: Colors.white70),
+            border: InputBorder.none,
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+              icon: const Icon(Icons.clear, color: Colors.white70),
+              onPressed: () {
+                _searchController.clear();
+              },
+            )
+                : null,
+          ),
+        ),
       ),
     );
   }
@@ -201,11 +325,11 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.9),
+            color: Colors.green.withOpacity(0.9),
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withOpacity(0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -231,7 +355,8 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
     );
   }
 
-  Widget _buildFloatingActionButton(TrackPlayerProvider playerProvider, AlbumSettingsProvider settingsProvider) {
+  Widget _buildFloatingActionButton(
+      TrackPlayerProvider playerProvider, AlbumSettingsProvider settingsProvider) {
     final isLarge = settingsProvider.fabSize == FabSize.large;
     final double fabSize = isLarge ? 80.0 : 50.0;
 
@@ -250,8 +375,13 @@ class _ShowsPageState extends State<ShowsPage> with AutomaticKeepAliveClientMixi
 
   Widget _buildBlurredBackground() {
     return Container(
-      decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/t_steal.webp'), fit: BoxFit.cover)),
-      child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), child: Container(color: Colors.black.withValues(alpha: 0.3))),
+      decoration: const BoxDecoration(
+          image: DecorationImage(
+              image: AssetImage('assets/images/t_steal.webp'),
+              fit: BoxFit.cover)),
+      child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+          child: Container(color: Colors.black.withOpacity(0.3))),
     );
   }
 }
