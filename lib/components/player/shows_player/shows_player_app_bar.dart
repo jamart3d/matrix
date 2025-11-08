@@ -4,7 +4,6 @@ import 'package:gap/gap.dart';
 import 'package:marquee/marquee.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/utils/album_title_parser.dart';
-import 'package:matrix/utils/string_formatter.dart';
 import 'package:provider/provider.dart';
 
 class ShowsPlayerSliverAppBar extends StatelessWidget {
@@ -58,25 +57,6 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
 
   Widget _buildAlbumInfo(BuildContext context) {
     final provider = context.watch<TrackPlayerProvider>();
-    final rawTitle = provider.currentAlbumTitle;
-
-    String venueText;
-    String dateText;
-
-    if (rawTitle.startsWith('Live at')) {
-      venueText = AlbumTitleParser.extractVenue(rawTitle);
-      dateText = AlbumTitleParser.extractDate(rawTitle);
-    } else {
-      final parts = rawTitle.split(' - ');
-      if (parts.length == 2) {
-        dateText = formatDateHumanReadable(parts[0]);
-        venueText = parts[1];
-      } else {
-        venueText = rawTitle;
-        dateText = '';
-      }
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -85,6 +65,8 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
           height: 24,
           child: LayoutBuilder(
             builder: (context, constraints) {
+              final venueText =
+              AlbumTitleParser.extractVenue(provider.currentAlbumTitle);
               final textStyle = TextStyle(
                 color: themeColor,
                 fontWeight: FontWeight.bold,
@@ -114,7 +96,7 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
         ),
         const Gap(2),
         Text(
-          dateText,
+          AlbumTitleParser.extractDate(provider.currentAlbumTitle),
           style:
           TextStyle(color: themeColor, fontSize: 16, shadows: glowShadows),
         ),

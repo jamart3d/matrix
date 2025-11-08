@@ -167,9 +167,9 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
     final theme = settingsProvider.matrixColorTheme;
     final themeColor = getThemeColor(theme);
     final darkThemeColor = getDarkThemeColor(theme);
-    const themeAccentColor = Colors.black;
+    final themeAccentColor = getThemeAccentColor(theme);
     final glowShadows = [
-      const Shadow(color: themeAccentColor, blurRadius: 1),
+      Shadow(color: themeAccentColor, blurRadius: 1),
       // Shadow(color: themeAccentColor, blurRadius: 6),
     ];
 
@@ -258,24 +258,8 @@ class _MatrixMusicPlayerPageState extends State<MatrixMusicPlayerPage>
   Widget _buildAlbumInfo(
       BuildContext context, Color themeColor, List<Shadow> glowShadows) {
     final provider = context.watch<TrackPlayerProvider>();
-    final rawTitle = provider.currentAlbumTitle;
-
-    String venueText;
-    String dateText;
-
-    if (rawTitle.startsWith('Live at')) {
-      venueText = AlbumTitleParser.extractVenue(rawTitle);
-      dateText = AlbumTitleParser.extractDate(rawTitle);
-    } else {
-      final parts = rawTitle.split(' - ');
-      if (parts.length == 2) {
-        dateText = formatDateHumanReadable(parts[0]);
-        venueText = parts[1];
-      } else {
-        venueText = rawTitle;
-        dateText = '';
-      }
-    }
+    final venueText = AlbumTitleParser.extractVenue(provider.currentAlbumTitle);
+    final dateText = AlbumTitleParser.extractDate(provider.currentAlbumTitle);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
