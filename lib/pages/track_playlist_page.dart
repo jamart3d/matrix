@@ -2,13 +2,14 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:matrix/helpers/album_helper.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/utils/duration_formatter.dart';
 import 'package:matrix/utils/string_formatter.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
+import 'package:marquee/marquee.dart';
+import 'package:matrix/utils/album_title_parser.dart';
 
 class TrackPlaylistPage extends StatefulWidget {
   const TrackPlaylistPage({super.key});
@@ -19,6 +20,28 @@ class TrackPlaylistPage extends StatefulWidget {
 
 class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
   final _logger = Logger();
+
+  /// Formats the album/show title based on its structure.
+  String _getFormattedTitle(String rawTitle) {
+    if (rawTitle.startsWith('Live at')) {
+      // It's a "Show" title, use the existing parser.
+      final venue = AlbumTitleParser.extractVenue(rawTitle);
+      final date = AlbumTitleParser.extractDate(rawTitle);
+      return '$venue - $date';
+    } else {
+      // It's likely an "Album" title from Seamons (e.g., "1982-04-10 - Capitol Theatre").
+      final parts = rawTitle.split(' - ');
+      if (parts.length == 2) {
+        final dateStr = parts[0];
+        final venueStr = parts[1];
+        // The string_formatter has a utility for this exact date format.
+        final formattedDate = formatDateHumanReadable(dateStr);
+        return '$venueStr - $formattedDate';
+      }
+    }
+    // Fallback for any other format.
+    return rawTitle;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +55,31 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
         foregroundColor: Colors.white,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(trackPlayerProvider.currentAlbumTitle),
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final displayTitle = _getFormattedTitle(trackPlayerProvider.currentAlbumTitle);
+            const style = TextStyle(fontSize: 18);
+
+            final textPainter = TextPainter(
+              text: TextSpan(text: displayTitle, style: style),
+              maxLines: 1,
+              textDirection: TextDirection.ltr,
+            )..layout(minWidth: 0, maxWidth: double.infinity);
+
+            if (textPainter.width > constraints.maxWidth) {
+              return SizedBox(
+                height: 30,
+                child: Marquee(
+                  text: displayTitle,
+                  style: style,
+                  velocity: 30.0,
+                  blankSpace: 20.0,
+                ),
+              );
+            }
+            return Text(displayTitle, style: style);
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep),
@@ -61,7 +108,7 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
               child: Container(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: Colors.black.withOpacity(0.5),
               ),
             ),
           ),
@@ -97,7 +144,7 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
                 ? Text(
               track.trackNumber,
               style: TextStyle(
-                color: isCurrentlyPlayingTrack ? Colors.yellow.withValues(alpha: 0.9) : Colors.white70,
+                color: isCurrentlyPlayingTrack ? Colors.yellow.withOpacity(0.9) : Colors.white70,
                 fontSize: 14,
                 fontStyle: FontStyle.italic,
               ),
@@ -115,16 +162,17 @@ class _TrackPlaylistPageState extends State<TrackPlaylistPage> {
             trailing: Text(
               formatDurationSeconds(track.trackDuration),
               style: TextStyle(
-                color: isCurrentlyPlayingTrack ? Colors.yellow.withValues(alpha: 0.8) : Colors.white70,
+                color: isCurrentlyPlayingTrack ? Colors.yellow.withOpacity(0.8) : Colors.white70,
               ),
             ),
             onTap: () {
               if (!isCurrentlyPlayingTrack) {
-                playTrackFromAlbum(trackPlayerProvider.playlist, track);
+                // Correctly seek to the index instead of reloading the playlist
+                trackPlayerProvider.seekToIndex(index);
               }
             },
             selected: isCurrentlyPlayingTrack,
-            selectedTileColor: Colors.yellow.withValues(alpha: 0.1),
+            selectedTileColor: Colors.yellow.withOpacity(0.1),
           );
         },
       ),

@@ -14,8 +14,7 @@
         android:name="${applicationName}"
         android:usesCleartextTraffic="true"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:icon="@mipmap/ic_launcher1"
-        android:extractNativeLibs="true">
+        android:icon="@mipmap/ic_launcher1">
         <activity
             android:name=".MainActivity"
             android:exported="true"

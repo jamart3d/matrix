@@ -1,3 +1,5 @@
+// lib/components/player/song_scroll_wheel.dart
+
 import 'package:flutter/material.dart';
 import 'package:matrix/providers/album_settings_provider.dart';
 import 'package:matrix/providers/track_player_provider.dart';
@@ -15,8 +17,6 @@ class SongScrollWheel extends StatefulWidget {
 }
 
 class _SongScrollWheelState extends State<SongScrollWheel> {
-  // --- SIMPLIFIED STATE ---
-  // The ItemPositionsListener and related state are no longer needed.
   late ItemScrollController _itemScrollController;
   int _lastKnownIndex = -1;
 
@@ -31,13 +31,11 @@ class _SongScrollWheelState extends State<SongScrollWheel> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // Use jumpTo for the initial scroll to avoid animations on page load.
         _scrollToCurrentTrack(isInitial: true);
       }
     });
   }
 
-  // This method is now much simpler.
   void _scrollToCurrentTrack({bool isInitial = false}) {
     final index = widget.trackPlayerProvider.currentIndex;
 
@@ -69,15 +67,12 @@ class _SongScrollWheelState extends State<SongScrollWheel> {
     final allSongs = _getAllSongs(context);
 
     if (allSongs.isEmpty) {
-      return const SizedBox(
-        height: 120,
-        child: Center(
-          child: Text(
-            'No tracks available',
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 16,
-            ),
+      return const Center(
+        child: Text(
+          'No tracks available',
+          style: TextStyle(
+            color: Colors.white54,
+            fontSize: 16,
           ),
         ),
       );
@@ -85,48 +80,40 @@ class _SongScrollWheelState extends State<SongScrollWheel> {
 
     final currentIndex = widget.trackPlayerProvider.currentIndex;
 
-    return SizedBox(
-      height: 120,
-      child: ScrollablePositionedList.builder(
-        itemScrollController: _itemScrollController,
-        // The ItemPositionsListener is no longer needed here.
-        scrollDirection: Axis.vertical,
-        itemCount: allSongs.length,
-        itemBuilder: (context, index) {
-          final isCurrentTrack = (index == currentIndex);
+    return ScrollablePositionedList.builder(
+      itemScrollController: _itemScrollController,
+      scrollDirection: Axis.vertical,
+      itemCount: allSongs.length,
+      itemBuilder: (context, index) {
+        final isCurrentTrack = (index == currentIndex);
 
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            // The margin is now constant, not dependent on the center position.
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              // The color only depends on whether it's the current track.
-              color: isCurrentTrack
-                  ? Colors.yellow.withValues(alpha:0.3)
-                  : Colors.transparent,
-            ),
-            child: Center(
-              child: Text(
-                allSongs[index],
-                style: TextStyle(
-                  // The text color only depends on whether it's the current track.
-                  color: isCurrentTrack
-                      ? Colors.yellow
-                      : Colors.white.withValues(alpha:0.7), // Non-current tracks are slightly dimmed.
-                  // There are now only two states: current or not current.
-                  fontSize: isCurrentTrack ? 18 : 16,
-                  fontWeight: isCurrentTrack ? FontWeight.bold : FontWeight.w400,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: isCurrentTrack
+                ? Colors.yellow.withOpacity(0.3)
+                : Colors.transparent,
+          ),
+          child: Center(
+            child: Text(
+              allSongs[index],
+              style: TextStyle(
+                color: isCurrentTrack
+                    ? Colors.yellow
+                    : Colors.white.withOpacity(0.8),
+                fontSize: isCurrentTrack ? 18 : 16,
+                fontWeight: isCurrentTrack ? FontWeight.bold : FontWeight.w400,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 

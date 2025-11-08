@@ -164,7 +164,7 @@ class AboutPage extends StatelessWidget {
 
             // About section
             const Text(
-              'This app lists and plays, with gapless playback, mp3 files from Archive.org and provides a way to select a random matrix recording of choice Grateful Dead shows.',
+              'And a big Thank You! to all involved in making and posting these matrix recordings.  This app lists and plays, with gapless playback, mp3 files from Archive.org and provides a way to select a random matrix recording of a choice show.  The list of shows is locally stored in the app, and has not been fully vetted.',
               style: TextStyle(fontSize: 16, color: Colors.white, height: 1.5),
             ),
 
@@ -222,7 +222,22 @@ class AboutPage extends StatelessWidget {
               ),
             ),
 
-            _buildSectionTitle('Support & Links'),
+            _buildSectionTitle('Whats a matrix?'),
+
+            Card(
+              color: Colors.grey[900],
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('A matrix is when one or more source(s) recorded by members of the audience (AUD) is layered beneath a source recorded off the soundboard (SBD).'),
+                  ],
+                ),
+              ),
+            ),
+
+            _buildSectionTitle('Misc Links'),
 
             Card(
               color: Colors.grey[900],

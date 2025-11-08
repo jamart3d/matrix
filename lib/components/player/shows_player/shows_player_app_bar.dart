@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:marquee/marquee.dart';
 import 'package:matrix/providers/track_player_provider.dart';
 import 'package:matrix/utils/album_title_parser.dart';
+import 'package:matrix/utils/string_formatter.dart';
 import 'package:provider/provider.dart';
 
 class ShowsPlayerSliverAppBar extends StatelessWidget {
@@ -24,11 +25,9 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverAppBar(
       backgroundColor: Colors.transparent, // Important for blur to be visible
-      // --- FIX APPLIED HERE ---
       pinned: true,
       floating: false,
       snap: false,
-      // --- END OF FIX ---
       expandedHeight: 120.0,
       actions: [
         IconButton(
@@ -37,8 +36,8 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
           onPressed: onClearPlaylist,
         ),
       ],
-      // --- BLUR EFFECT ADDED HERE ---
-      flexibleSpace: ClipRect( // Prevents the blur from bleeding outside the app bar
+      flexibleSpace: ClipRect(
+        // Prevents the blur from bleeding outside the app bar
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
           child: FlexibleSpaceBar(
@@ -46,19 +45,38 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
             background: Align(
               alignment: Alignment.bottomLeft,
               child: Padding(
-                padding: const EdgeInsets.only(left: 56, bottom: 16, right: 16),
+                padding:
+                const EdgeInsets.only(left: 56, bottom: 16, right: 16),
                 child: _buildAlbumInfo(context),
               ),
             ),
           ),
         ),
       ),
-      // --- END OF BLUR EFFECT ---
     );
   }
 
   Widget _buildAlbumInfo(BuildContext context) {
     final provider = context.watch<TrackPlayerProvider>();
+    final rawTitle = provider.currentAlbumTitle;
+
+    String venueText;
+    String dateText;
+
+    if (rawTitle.startsWith('Live at')) {
+      venueText = AlbumTitleParser.extractVenue(rawTitle);
+      dateText = AlbumTitleParser.extractDate(rawTitle);
+    } else {
+      final parts = rawTitle.split(' - ');
+      if (parts.length == 2) {
+        dateText = formatDateHumanReadable(parts[0]);
+        venueText = parts[1];
+      } else {
+        venueText = rawTitle;
+        dateText = '';
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -67,8 +85,6 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
           height: 24,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final venueText =
-              AlbumTitleParser.extractVenue(provider.currentAlbumTitle);
               final textStyle = TextStyle(
                 color: themeColor,
                 fontWeight: FontWeight.bold,
@@ -98,8 +114,9 @@ class ShowsPlayerSliverAppBar extends StatelessWidget {
         ),
         const Gap(2),
         Text(
-          AlbumTitleParser.extractDate(provider.currentAlbumTitle),
-          style: TextStyle(color: themeColor, fontSize: 16, shadows: glowShadows),
+          dateText,
+          style:
+          TextStyle(color: themeColor, fontSize: 16, shadows: glowShadows),
         ),
       ],
     );
