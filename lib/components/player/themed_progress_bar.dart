@@ -40,8 +40,8 @@ class ThemedProgressBar extends StatelessWidget {
                   style: TextStyle(
                     color: activeColor, // <-- USE PARAMETER
                     shadows: [
-                      Shadow(color: shadowColor, blurRadius: 3), // <-- USE PARAMETER
-                      Shadow(color: shadowColor, blurRadius: 6), // <-- USE PARAMETER
+                      Shadow(color: shadowColor, blurRadius: 1), // <-- USE PARAMETER
+                      // Shadow(color: shadowColor, blurRadius: 6), // <-- USE PARAMETER
                     ],
                   ),
                 ),
@@ -57,8 +57,8 @@ class ThemedProgressBar extends StatelessWidget {
                   style: TextStyle(
                     color: activeColor, // <-- USE PARAMETER
                     shadows: [
-                      Shadow(color: shadowColor, blurRadius: 3), // <-- USE PARAMETER
-                      Shadow(color: shadowColor, blurRadius: 6), // <-- USE PARAMETER
+                      Shadow(color: shadowColor, blurRadius: 1), // <-- USE PARAMETER
+                      // Shadow(color: shadowColor, blurRadius: 6), // <-- USE PARAMETER
                     ],
                   ),
                 ),

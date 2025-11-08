@@ -226,8 +226,8 @@ class AboutPage extends StatelessWidget {
 
             Card(
               color: Colors.grey[900],
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+              child: const Padding(
+                padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

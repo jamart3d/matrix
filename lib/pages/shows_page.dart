@@ -140,7 +140,9 @@ class _ShowsPageState extends State<ShowsPage>
   Future<void> _scrollToCurrentShow() async {
     if (_currentShowName == null ||
         !_itemScrollController.isAttached ||
-        _originalShows.isEmpty) return;
+        _originalShows.isEmpty) {
+      return;
+    }
 
     final category = ModalRoute.of(context)?.settings.arguments as String?;
     final filteredShows = _getFilteredShows(category);
