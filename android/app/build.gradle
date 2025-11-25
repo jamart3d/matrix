@@ -25,9 +25,11 @@ if (flutterVersionName == null) {
 
 // This block loads your key.properties file securely.
 def keyProperties = new Properties()
-def keyPropertiesFile = rootProject.file('key.properties')
+def keyPropertiesFile = file('key.properties')
 if (keyPropertiesFile.exists()) {
     keyProperties.load(new FileInputStream(keyPropertiesFile))
+} else {
+    println "key.properties file not found in android/app directory. Please create one with your signing configurations."
 }
 
 android {
@@ -44,29 +46,17 @@ android {
         jvmTarget = '1.8'
     }
 
-    // This block defines the signing configurations for your app.
-    // signingConfigs {
-    //     release {
-    //         // This 'if' block makes sure the build doesn't fail if key.properties is missing.
-    //         if (keyProperties.storeFile != null) {
-    //             storeFile file(keyProperties.storeFile)
-    //             storePassword keyProperties.storePassword
-    //             keyAlias keyProperties.keyAlias // <-- This will correctly read 'upload' from key.properties
-    //             keyPassword keyProperties.keyPassword
-    //         }
-            
-    //     }
-    // }
-
     signingConfigs {
-    release {
-        // --- TEMPORARY TEST ---
-        storeFile file('upload-keystore.jks') // Path is relative to this build.gradle file
-        storePassword '1Whitebiju'
-        keyAlias 'upload'
-        keyPassword '1Whitebiju'
+        release {
+            // This 'if' block makes sure the build doesn't fail if key.properties is missing.
+            if (keyProperties.containsKey('storeFile')) {
+                storeFile file(keyProperties['storeFile'])
+                storePassword keyProperties['storePassword']
+                keyAlias keyProperties['keyAlias']
+                keyPassword keyProperties['keyPassword']
+            }
+        }
     }
-}
 
     defaultConfig {
         applicationId = "com.jamart3d.matrix"
